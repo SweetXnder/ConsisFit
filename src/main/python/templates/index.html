@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ConsisFit | Calisthenics OS</title>
+    <style>
+        :root { --bg-color: #0b0c10; --panel-bg: #1f2833; --primary: #66fcf1; --primary-dim: #45a29e; --text-main: #c5c6c7; --locked: #2a2a2a; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .os-container { display: grid; grid-template-columns: 360px 1fr 340px; gap: 20px; max-width: 1550px; width: 100%; }
+        .panel { background: var(--panel-bg); border-radius: 12px; padding: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 1px solid rgba(102, 252, 241, 0.1); margin-bottom: 20px;}
+        .panel-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        h2 { color: var(--primary); margin: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-box { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; text-align: center; }
+        .stat-val { font-size: 1.6rem; color: #fff; font-weight: bold; }
+        .stat-label { font-size: 0.7rem; color: var(--primary-dim); }
+
+        .heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; }
+        .heat-day { aspect-ratio: 1; border-radius: 3px; background: var(--locked); }
+        .heat-4 { background: var(--primary); box-shadow: 0 0 5px var(--primary); }
+
+        .tree-container { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 15px; }
+        .tree-tier { display: flex; gap: 12px; }
+        .skill-node { background: var(--locked); border: 2px solid #444; color: #777; padding: 10px 16px; border-radius: 30px; font-size: 0.8rem; font-weight: bold; cursor: not-allowed; transition: 0.3s; }
+        .skill-node.unlocked { background: rgba(0,0,0,0.5); border-color: var(--primary-dim); color: white; cursor: pointer; }
+        .skill-node.unlocked:hover { border-color: var(--primary); box-shadow: 0 0 10px rgba(102, 252, 241, 0.3); }
+        .skill-node.active { background: var(--primary); color: #000; border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
+
+        .macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;}
+        .macro-box { background: #0b0c10; border-left: 3px solid var(--primary); padding: 10px; font-size: 0.85rem;}
+        #insight-text { font-style: italic; color: #aaa; font-size: 0.8rem;}
+
+        .chat-box { height: 210px; background: #0b0c10; border-radius: 8px; padding: 12px; overflow-y: auto; margin-bottom: 12px; font-size: 0.82rem; border: 1px solid #333;}
+        .msg-user { color: #fff; background: #333; padding: 9px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 85%; margin-left: auto;}
+        .msg-ai { color: #000; background: var(--primary); padding: 9px; border-radius: 8px; margin-bottom: 8px; width: fit-content; max-width: 85%;}
+        .chat-input { display: flex; gap: 5px; }
+        .chat-input input { flex: 1; padding: 10px; background: #000; border: 1px solid var(--primary-dim); color: white; border-radius: 6px;}
+        
+        button { background: var(--primary-dim); color: #000; border: none; padding: 9px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: var(--primary); }
+        button.danger { background: #ff4c4c; color: white; }
+        button.text-action { background: transparent; color: var(--primary-dim); border: 1px solid var(--primary-dim); padding: 4px 8px; font-size: 0.72rem; border-radius: 4px; }
+        button.text-action:hover { color: var(--primary); border-color: var(--primary); box-shadow: 0 0 6px rgba(102, 252, 241, 0.2); }
+        
+        input[type="file"] { display: none; }
+        .custom-file-upload { border: 1px solid var(--primary-dim); color: var(--primary); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; }
+
+        #video-container { background: #000; border-radius: 8px; height: 480px; display: flex; align-items: center; justify-content: center; border: 1px solid #333; overflow: hidden; position: relative;}
+        img { width: 100%; height: 100%; object-fit: contain; display: none; }
+        .viewport-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+
+        .archive-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+        .archive-label { font-size: 0.72rem; color: var(--primary-dim); text-transform: uppercase; letter-spacing: 0.5px;}
+        .archive-val { font-size: 1.05rem; color: #fff; font-weight: bold;}
+
+        /* MODAL DIALOG STYLE BASES */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-body { background: #1f2833; padding: 25px; border-radius: 10px; border: 1px solid var(--primary-dim); width: 340px; box-shadow: 0 0 25px rgba(102, 252, 241, 0.25); }
+        .modal-body label { display: block; font-size: 0.75rem; color: var(--primary-dim); margin-top: 12px; text-transform: uppercase; }
+        .modal-body input, .modal-body select { width: 100%; padding: 8px; background: #0b0c10; border: 1px solid #444; color: white; border-radius: 4px; margin-top: 4px; box-sizing: border-box; }
+        .modal-body input:focus { border-color: var(--primary); outline: none; }
+    </style>
+</head>
+<body>
+
+    <div class="os-container">
+        
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-header-flex">
+                    <h2>User's Profile</h2>
+                    <button class="text-action" onclick="toggleMetricsModal(true)">⚙️ Edit Metrics</button>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-val" id="stat-lvl">LVL 1</div><div class="stat-label">PROGRESS</div></div>
+                    <div class="stat-box"><div class="stat-val" id="stat-xp">0</div><div class="stat-label">TOTAL METRIC XP</div></div>
+                </div>
+                <h2>Streak for the month</h2>
+                <div class="heatmap" id="heatmap-container"></div>
+            </div>
+
+            <div class="panel">
+                <h2>ConsisFit Nutritional Insights</h2>
+                <p id="insight-text">Initializing Groq Plan...</p>
+                <div class="macro-grid">
+                    <div class="macro-box">Calories: <span id="cals">...</span></div>
+                    <div class="macro-box">Protein: <span id="pro">...</span></div>
+                    <div class="macro-box">Carbohydrates: <span id="carb">...</span></div>
+                    <div class="macro-box">Fat: <span id="fat">...</span></div>
+                </div>
+                <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px;">
+                    <strong style="color:var(--primary); font-size:0.75rem;">Target Exercises:</strong>
+                    <div id="workout-rec" style="font-size: 0.85rem; margin-top:5px; color:#fff; line-height: 1.3;">...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="viewport-header">
+                <h2>Progress Tracker</h2>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label class="custom-file-upload">
+                        <input type="file" id="videoFile" accept="video/*" onchange="updateFileName(this)">
+                        <span id="file-label"> Upload Exercise</span>
+                    </label>
+                    <button onclick="startDigest('video')">Digest Exercise</button>
+                    <button onclick="startDigest('webcam')">Open Camera</button>
+                    <button class="danger" onclick="stopFeed()">Stop</button>
+                </div>
+            </div>
+            <div id="video-container">
+                <h3 id="placeholder">Waiting For Camera</h3>
+                <img id="ai-feed" src="">
+            </div>
+
+            <div style="margin-top:20px;">
+                <h2>Progression Mapping Tree</h2>
+                <div class="tree-container">
+                    <div class="tree-tier">
+                        <div class="skill-node unlocked active" onclick="selectSkill(this, 'Push-Ups')">Standard Push-Ups</div>
+                        <div class="skill-node unlocked" onclick="selectSkill(this, 'Squats')">Squats</div>
+                        <div class="skill-node unlocked" onclick="selectSkill(this, 'Lunges')">Lunges</div>
+                    </div>
+                    <div class="tree-tier">
+                        <div class="skill-node unlocked" onclick="selectSkill(this, 'Dips')">Dips</div>
+                        <div id="node-pullups" class="skill-node locked" onclick="selectSkill(this, 'Pull-Ups')" title="Locked: Requires Level 3">Pull-Ups</div>
+                    </div>
+                    <div class="tree-tier">
+                        <div id="node-handstand" class="skill-node locked" onclick="selectSkill(this, 'Handstand Push-Ups')" title="Locked: Requires Level 6">Handstand Push-Ups</div>
+                        <div id="node-raises" class="skill-node locked" onclick="selectSkill(this, 'Hanging Leg Raises')" title="Locked: Requires Level 6">Hanging Leg Raises</div>
+                    </div>
+                    <div class="tree-tier">
+                        <div id="node-muscleups" class="skill-node locked" onclick="selectSkill(this, 'Planks')" title="Locked: Requires Level 10">Planks (Isometric Apex)</div>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" id="active-exercise" value="Push-Ups">
+        </div>
+
+        <div class="sidebar">
+            <div class="panel" style="margin-bottom: 15px;">
+                <h2>Personal Gym Trainer</h2>
+                <p style="font-size:0.75rem; color:#aaa; margin-bottom:10px;">Ask ConsisFit anything about your workouts or nutrition!</p>
+                <div class="chat-box" id="chatbox">
+                    <div class="msg-ai">Greetings! I am ConsisFit, your personal data-driven AI Gym Trainer and Performance Nutritionist. Do you have any questions about your workouts or nutrition?</div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="coach-q" placeholder="Why did my lower elbow click?">
+                    <button id="ask-btn" onclick="askCoach()">Ask</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Progress Insights</h2>
+                <div class="archive-box">
+                    <div class="archive-label">All-Time Single Set (PR)</div>
+                    <div class="archive-val" id="record-pr">0 Reps</div>
+                </div>
+                <div class="archive-box">
+                    <div class="archive-label">All Time Reps Done</div>
+                    <div class="archive-val" id="record-volume">0 Reps</div>
+                </div>
+                <div style="margin-top:12px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border: 1px solid rgba(102, 252, 241, 0.05);">
+                    <strong style="color:var(--primary); font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:block; margin-bottom:6px;">Milestone Accomplishments</strong>
+                    <div id="milestones-vault" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 5px; color:#fff;"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-overlay" id="metricsModal">
+        <div class="modal-body">
+            <h2 style="font-size: 1rem; margin-bottom: 5px;">Adjust Metrics Array</h2>
+            <p style="font-size:0.7rem; color:#aaa; margin:0 0 10px 0;">Updates serialize to Java Core and flash AI recommendations.</p>
+            
+            <label>Age Target</label>
+            <input type="number" id="edit-age" required>
+            
+            <label>Weight (kg)</label>
+            <input type="number" id="edit-weight" required>
+            
+            <label>Height (cm)</label>
+            <input type="number" id="edit-height" required>
+            
+            <label>Gender Mapping</label>
+            <select id="edit-gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+            
+            <label>Primary Fitness Goal</label>
+            <input type="text" id="edit-goal" required>
+            
+            <div style="display:flex; gap: 8px; margin-top:20px; justify-content: flex-end;">
+                <button style="background:#444; color:white;" onclick="toggleMetricsModal(false)">Cancel</button>
+                <button onclick="saveMetricUpdates()">Save Array</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function syncDataMetrics() {
+            try {
+                const statsRes = await fetch('/api/stats');
+                const data = await statsRes.json();
+                document.getElementById('stat-lvl').innerText = `LVL ${data.level}`;
+                document.getElementById('stat-xp').innerText = data.xp.toLocaleString();
+                document.getElementById('record-volume').innerText = `${data.total_volume.toLocaleString()} Reps`;
+                
+                if(data.highest_rep > 0) {
+                    document.getElementById('record-pr').innerText = `${data.highest_rep} Reps (${data.highest_rep_exercise})`;
+                } else {
+                    document.getElementById('record-pr').innerText = "0 Reps";
+                }
+
+                const vault = document.getElementById('milestones-vault');
+                vault.innerHTML = '';
+                data.milestones.forEach(badge => {
+                    let container = document.createElement('div');
+                    container.style.padding = "4px 0";
+                    container.innerText = badge;
+                    vault.appendChild(container);
+                });
+
+                const pNode = document.getElementById('node-pullups');
+                const hNode = document.getElementById('node-handstand');
+                const rNode = document.getElementById('node-raises');
+                const mNode = document.getElementById('node-muscleups');
+
+                if (data.level >= 3 && pNode) { pNode.classList.remove('locked'); pNode.classList.add('unlocked'); pNode.title = "Unlocked!"; }
+                if (data.level >= 6 && hNode) { hNode.classList.remove('locked'); hNode.classList.add('unlocked'); hNode.title = "Unlocked!"; }
+                if (data.level >= 6 && rNode) { rNode.classList.remove('locked'); rNode.classList.add('unlocked'); rNode.title = "Unlocked!"; }
+                if (data.level >= 10 && mNode) { mNode.classList.remove('locked'); mNode.classList.add('unlocked'); mNode.title = "Unlocked!"; }
+
+                const grid = document.getElementById('heatmap-container');
+                grid.innerHTML = '';
+                for(let i = 0; i < 28; i++) {
+                    let node = document.createElement('div');
+                    node.className = `heat-day ${i < data.workouts_logged ? 'heat-4' : ''}`;
+                    grid.appendChild(node);
+                }
+            } catch (e) { console.error("Stats sync delay:", e); }
+
+            document.getElementById('insight-text').innerText = "ConsisFit Analyzing...";
+            document.getElementById('cals').innerText = " Loading...";
+            document.getElementById('pro').innerText = " Loading...";
+            document.getElementById('carb').innerText = " Loading...";
+            document.getElementById('fat').innerText = " Loading...";
+            document.getElementById('workout-rec').innerText = "Awaiting model generation sequence...";
+
+            setTimeout(async () => {
+                try {
+                    const planRes = await fetch('/api/daily_plan');
+                    const pData = await planRes.json();
+                    
+                    if(pData && !pData.error && pData.calories) {
+                        document.getElementById('cals').innerText = pData.calories;
+                        document.getElementById('pro').innerText = pData.protein;
+                        document.getElementById('carb').innerText = pData.carbs;
+                        document.getElementById('fat').innerText = pData.fats;
+                        document.getElementById('workout-rec').innerText = pData.workout;
+                        document.getElementById('insight-text').innerText = `"${pData.insight}"`;
+                    } else {
+                        document.getElementById('insight-text').innerText = "⚠️ Protocol synchronization paused. Retrying...";
+                    }
+                } catch (error) {
+                    console.error("Groq connection timeout exception:", error);
+                    document.getElementById('insight-text').innerText = "❌ Engine offline. Verify network connection layers.";
+                }
+            }, 1000); 
+        }
+        window.onload = syncDataMetrics;
+
+        // NEW: Handles asynchronous modal open parameters and pre-fills raw target parameters from disk
+        async function toggleMetricsModal(visible) {
+            const overlay = document.getElementById('metricsModal');
+            if(visible) {
+                overlay.style.display = 'flex';
+                try {
+                    const res = await fetch('/api/get_profile');
+                    const profile = await res.json();
+                    if(!profile.error) {
+                        document.getElementById('edit-age').value = profile.age;
+                        document.getElementById('edit-weight').value = profile.weight;
+                        document.getElementById('edit-height').value = profile.height;
+                        document.getElementById('edit-gender').value = profile.gender;
+                        document.getElementById('edit-goal').value = profile.goal;
+                    }
+                } catch(e) { console.error("Failed loading current metrics:", e); }
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // NEW: Submits asynchronous metric payload arrays and flashes macro generation pipelines clean
+        async function saveMetricUpdates() {
+            const payload = {
+                age: document.getElementById('edit-age').value,
+                weight: document.getElementById('edit-weight').value,
+                height: document.getElementById('edit-height').value,
+                gender: document.getElementById('edit-gender').value,
+                goal: document.getElementById('edit-goal').value
+            };
+
+            try {
+                const res = await fetch('/api/update_profile', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) {
+                    toggleMetricsModal(false);
+                    // Force complete recalculation execution cycle loops immediately
+                    syncDataMetrics();
+                }
+            } catch(e) { alert("Failed storing tracking updates."); }
+        }
+
+        function selectSkill(element, name) {
+            if(element.classList.contains('locked')) {
+                alert("Node Locked. Complete Foundation reps to generate sufficient character XP.");
+                return;
+            }
+            document.querySelectorAll('.skill-node').forEach(n => n.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('active-exercise').value = name;
+        }
+
+        function updateFileName(input) {
+            const lbl = document.getElementById('file-label');
+            if(input.files.length > 0) lbl.innerText = '✔️ ' + input.files[0].name.substring(0, 12) + '...';
+        }
+
+        async function startDigest(layerType) {
+            const ex = document.getElementById('active-exercise').value;
+            const img = document.getElementById('ai-feed');
+            const placeholder = document.getElementById('placeholder');
+            const fileInput = document.getElementById('videoFile');
+
+            if (layerType === 'webcam') {
+                placeholder.style.display = 'none';
+                img.style.display = 'block';
+                img.src = `/video_feed?exercise=${ex}&source=0`;
+            } else {
+                if (fileInput.files.length === 0) { alert("Select local file resource matrix first."); return; }
+                placeholder.innerText = "DIGESTING STREAM OVER NEURAL INTERFACE...";
+                placeholder.style.display = 'block';
+                img.style.display = 'none';
+
+                const form = new FormData();
+                form.append('video', fileInput.files[0]);
+
+                const uploadRes = await fetch('/upload_video', { method: 'POST', body: form });
+                const uData = await uploadRes.json();
+                
+                if (uploadRes.ok) {
+                    placeholder.style.display = 'none';
+                    img.style.display = 'block';
+                    img.src = `/video_feed?exercise=${ex}&source=${encodeURIComponent(uData.filepath)}`;
+                } else {
+                    placeholder.innerText = "PIPELINE FAULT.";
+                }
+            }
+        }
+
+        function stopFeed() {
+            document.getElementById('ai-feed').src = "";
+            document.getElementById('ai-feed').style.display = 'none';
+            document.getElementById('placeholder').innerText = "VIDEO TERMINATED. AWAITING FEED LAYER.";
+            document.getElementById('placeholder').style.display = 'block';
+            setTimeout(syncDataMetrics, 1500);
+        }
+
+        async function askCoach() {
+            const box = document.getElementById('coach-q');
+            const q = box.value; if(!q) return;
+            const target = document.getElementById('chatbox');
+            
+            target.innerHTML += `<div class="msg-user">${q}</div>`;
+            box.value = "";
+            target.scrollTop = target.scrollHeight;
+
+            const res = await fetch('/ask_coach', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question: q})
+            });
+            const data = await res.json();
+            target.innerHTML += `<div class="msg-ai">${data.answer}</div>`;
+            target.scrollTop = target.scrollHeight;
+        }
+    </script>
+</body>
+</html>

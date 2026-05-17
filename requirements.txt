@@ -1,0 +1,4 @@
+opencv-python
+mediapipe
+py4j
+numpy

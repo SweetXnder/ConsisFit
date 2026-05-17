@@ -1,0 +1,28 @@
+# Python Environment Isolation Mappings
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Project Stream Resource Wrappers
+src/main/python/uploads/
+src/main/resources/
+
+# Compiled Java Bytecode Matrices
+target/
+*.class
+
+# Workspace Matrix Caches
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local Application Data Registries
+workout_history.csv
+user_profile.csv
+user_profile.csv.tmp
