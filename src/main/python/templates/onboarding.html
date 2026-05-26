@@ -1,37 +1,478 @@
 <!DOCTYPE html>
 <html lang="en">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONSISFIT | BMI</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
 <head>
     <meta charset="UTF-8">
     <title>ConsisFit | Initialize Profile</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background-color: #0b0c10; color: #c5c6c7; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .form-box { background: #1f2833; padding: 40px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 380px; border: 1px solid #45a29e; }
-        h2 { color: #66fcf1; text-align: center; margin-top: 0; letter-spacing: 2px; font-size: 1.3rem; }
-        label { display: block; margin-top: 15px; font-size: 0.8rem; color: #45a29e; text-transform: uppercase; letter-spacing: 0.5px;}
-        input, select { width: 100%; padding: 11px; margin-top: 5px; background: #0b0c10; border: 1px solid #45a29e; color: white; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; background: #66fcf1; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 6px; margin-top: 25px; cursor: pointer; font-size: 0.95rem; letter-spacing: 0.5px; transition: 0.2s; }
-        button:hover { background: #45a29e; color: white; }
+    :root {
+      --green:       #4ade57;
+      --green-bright:#6fff79;
+      --green-dim:   #2a8c31;
+      --green-glow:  rgba(74,222,87,0.45);
+      --green-dark:  #1a5c1f;
+      --black:       #050505;
+      --dark:        #0d0d0d;
+      --card:        #111;
+      --white:       #f0f0f0;
+      --grey:        #888;
+
+      --font-display:'Black Ops One', cursive;
+      --font-body:   'Rajdhani', sans-serif;
+      --font-mono:   'Orbitron', monospace;
+
+      /* Timing */
+      --spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+      --smooth:  cubic-bezier(0.23, 1.00, 0.32, 1);
+      --snappy:  cubic-bezier(0.40, 0.00, 0.20, 1);
+
+      --dur-fast:  0.18s;
+      --dur-mid:   0.35s;
+      --dur-slow:  0.55s;
+      --dur-xslow: 0.80s;
+
+      /* Neon glow definitions */
+      --neon-sm:  0 0 6px #4ade57, 0 0 14px rgba(74,222,87,0.6);
+      --neon-md:  0 0 8px #4ade57, 0 0 22px rgba(74,222,87,0.65), 0 0 44px rgba(74,222,87,0.3);
+      --neon-lg:  0 0 10px #4ade57, 0 0 30px rgba(74,222,87,0.7), 0 0 70px rgba(74,222,87,0.35), 0 0 120px rgba(74,222,87,0.15);
+      --neon-txt: 0 0 7px #4ade57, 0 0 18px rgba(74,222,87,0.8), 0 0 36px rgba(74,222,87,0.4);
+      --neon-txt-lg: 0 0 10px #6fff79, 0 0 28px rgba(74,222,87,0.9), 0 0 60px rgba(74,222,87,0.5), 0 0 100px rgba(74,222,87,0.2);
+    }
+
+    /* Scrollbar styling */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none; 
+      margin: 0;
+    }
+
+
+    /* =============================================
+       RESET
+       ============================================= */
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    html, body { width:100%; height:100%; overflow:hidden; background:var(--black); font-family:var(--font-body); color:var(--white); }
+
+    /* =============================================
+       SCREEN SYSTEM
+       ============================================= */
+    .screen { position:fixed; inset:0; width:100%; height:100%; display:none; overflow-y:auto; z-index:1; }
+    .screen.active { display:flex; flex-direction:column; }
+
+    /* Scanline */
+    body::after {
+      content:''; position:fixed; inset:0;
+      background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+      pointer-events:none; z-index:9999;
+    }
+    #particles { position:fixed; inset:0; pointer-events:none; z-index:0; }
+
+    /* =============================================
+       GLOBAL MORPH TRANSITIONS
+       ============================================= */
+    button, input, .sex-btn, .tree-dot, .streak-cell,
+    .macro-row, .profile-panel, .nutrition-panel,
+    .streak-panel, .chatbot-panel, .form-card {
+      transition:
+        background    var(--dur-mid)  var(--smooth),
+        color         var(--dur-fast) var(--snappy),
+        border-color  var(--dur-mid)  var(--smooth),
+        box-shadow    var(--dur-mid)  var(--smooth),
+        transform     var(--dur-mid)  var(--spring),
+        border-radius var(--dur-slow) var(--spring),
+        letter-spacing var(--dur-mid) var(--smooth),
+        padding       var(--dur-mid)  var(--spring),
+        filter        var(--dur-mid)  var(--smooth);
+      position:relative; overflow:hidden;
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    /* =============================================
+       AMBIENT GLOW BLOBS  (behind everything)
+       ============================================= */
+    .amb {
+      position:absolute; border-radius:50%;
+      filter:blur(80px); pointer-events:none; z-index:0;
+      animation:ambFloat 8s ease-in-out infinite;
+    }
+    @keyframes ambFloat {
+      0%,100%{transform:translateY(0) scale(1)}
+      50%{transform:translateY(-18px) scale(1.06)}
+    }
+    @keyframes fadeInBg {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(40px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes logoGlow { 0%,100%{opacity:.8; text-shadow: var(--neon-txt-lg);} 50%{opacity:1; text-shadow: var(--neon-lg);} }
+
+#screen-bmi {
+  background:linear-gradient(145deg, #06140a 0%, #050505 45%, #060a14 100%);
+  align-items:center; justify-content:center;
+  padding:40px 20px; position:relative; overflow:hidden;
+}
+#screen-bmi.active {
+  animation: fadeInBg 1.2s ease-out forwards;
+}
+#screen-bmi.active .welcome-to {
+  opacity: 0; animation: slideUpFade 1s var(--smooth) 0.2s forwards;
+}
+#screen-bmi.active .logo-secondary {
+  opacity: 0; animation: slideUpFade 1s var(--smooth) 0.4s forwards, logoGlow 3s ease-in-out 1.4s infinite;
+}
+#screen-bmi.active .bmi-subtitle {
+  opacity: 0; animation: slideUpFade 1s var(--smooth) 0.6s forwards;
+}
+#screen-bmi.active .form-card {
+  opacity: 0; animation: slideUpFade 1s var(--smooth) 0.8s forwards;
+}
+
+.toast {
+  position:fixed; bottom:30px; left:50%; 
+  transform:translateX(-50%) translateY(150px) scale(0.9);
+   background:linear-gradient(135deg, rgba(10,28,12,0.97) 0%, rgba(6,16,8,0.99) 100%);
+  border:1px solid rgba(74,222,87,0.5);
+  color:var(--green); font-family:var(--font-display); font-size:13px;
+  letter-spacing:2px; padding:14px 30px; border-radius:8px; z-index:1000;
+  box-shadow:var(--neon-md); text-shadow:var(--neon-sm);
+  transition:transform 0.5s var(--spring), border-radius 0.5s var(--spring), opacity 0.3s var(--snappy);
+}
+
+.toast.show { 
+  transform:translateX(-50%) translateY(0) scale(1); 
+  opacity: 1;
+  pointer-events: auto;
+  border-radius:28px; 
+}
+
+.bmi-blob1 {
+  width:450px; height:450px;
+  background:radial-gradient(circle, rgba(74,222,87,0.09) 0%, transparent 68%);
+  top:-80px; left:-80px; animation-delay:1s;
+}
+.bmi-blob2 {
+  width:350px; height:350px;
+  background:radial-gradient(circle, rgba(74,222,87,0.06) 0%, transparent 68%);
+  bottom:-60px; right:-40px; animation-delay:4s;
+}
+#screen-bmi::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:linear-gradient(rgba(74,222,87,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(74,222,87,0.03) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+
+.bmi-content { position:relative; z-index:2; width:100%; max-width:600px; text-align:center; }
+.welcome-to  { font-family:var(--font-display); font-size:clamp(11px,1.8vw,16px); letter-spacing:6px; color:rgba(74,222,87,0.7); text-shadow:var(--neon-sm); margin-bottom:4px; text-transform:uppercase; }
+.logo-secondary {
+  font-family:var(--font-display); font-size:clamp(36px,7vw,74px);
+  color:var(--green-bright);
+  text-shadow: var(--neon-txt-lg);
+  margin-bottom:8px; line-height:1;
+  animation:logoGlow 3s ease-in-out infinite;
+}
+.bmi-subtitle {
+  font-size:13px; letter-spacing:3px; color:var(--green);
+  text-shadow:var(--neon-sm);
+  border-bottom:1px solid rgba(74,222,87,0.4);
+  display:inline-block; padding-bottom:4px; margin-bottom:32px;
+}
+
+/* Form card */
+.form-card {
+  background:linear-gradient(145deg, rgba(10,24,12,0.92) 0%, rgba(6,14,8,0.96) 100%);
+  border:1px solid rgba(74,222,87,0.22);
+  border-radius:18px; padding:34px 30px;
+  backdrop-filter:blur(14px);
+  box-shadow:
+    0 0 0 1px rgba(74,222,87,0.06) inset,
+    0 0 60px rgba(0,0,0,0.9),
+    0 0 40px rgba(74,222,87,0.07),
+    0 1px 0 rgba(74,222,87,0.15) inset;
+}
+.form-card:hover {
+  border-color:rgba(74,222,87,0.38);
+  box-shadow:0 0 0 1px rgba(74,222,87,0.1) inset, 0 0 70px rgba(0,0,0,0.95), 0 0 50px rgba(74,222,87,0.1), 0 1px 0 rgba(74,222,87,0.25) inset;
+  transform:translateY(-2px);
+}
+
+.form-row { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.form-label {
+  font-family:var(--font-display); font-size:clamp(12px,1.6vw,16px);
+  letter-spacing:2px; color:var(--green);
+  text-shadow:var(--neon-sm);
+  min-width:90px; text-align:right;
+}
+
+/* Inputs */
+.input-wrap { position:relative; flex:1; }
+.form-input {
+  width:100%;
+  background:linear-gradient(135deg, rgba(74,222,87,0.1) 0%, rgba(30,60,32,0.3) 100%);
+  border:1px solid rgba(74,222,87,0.25);
+  border-radius:30px; padding:13px 50px 13px 20px;
+  font-family:var(--font-body); font-size:16px; font-weight:700;
+  color:var(--white); outline:none;
+  transition:
+    background var(--dur-mid) var(--smooth),
+    border-color var(--dur-mid) var(--smooth),
+    box-shadow var(--dur-mid) var(--smooth),
+    border-radius var(--dur-slow) var(--spring),
+    padding var(--dur-slow) var(--spring),
+    transform var(--dur-mid) var(--spring);
+}
+.form-input:focus {
+  background:linear-gradient(135deg, rgba(74,222,87,0.18) 0%, rgba(40,80,44,0.4) 100%);
+  border-color:var(--green);
+  box-shadow:0 0 0 3px rgba(74,222,87,0.15), var(--neon-sm);
+  border-radius:14px; padding-left:24px; transform:scale(1.01);
+}
+.form-input:hover:not(:focus) {
+  background:linear-gradient(135deg, rgba(74,222,87,0.14) 0%, rgba(30,60,32,0.35) 100%);
+  border-color:rgba(74,222,87,0.45); border-radius:24px;
+}
+.input-unit {
+  position:absolute; right:18px; top:50%; transform:translateY(-50%);
+  font-family:var(--font-display); font-size:11px; letter-spacing:1px;
+  color:var(--green); text-shadow:var(--neon-sm); opacity:.9;
+}
+
+/* Sex circles */
+.sex-row { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+.sex-options { display:flex; gap:24px; flex:1; justify-content:center; }
+.sex-btn { 
+  display:flex; 
+  flex-direction:column; 
+  align-items:center; 
+  gap:8px; 
+  cursor:pointer; 
+  overflow:visible; 
+}
+.sex-circle {
+  width:48px; height:48px; border-radius:50%;
+  background:linear-gradient(135deg, rgba(74,222,87,0.12) 0%, rgba(20,50,22,0.5) 100%);
+  border:2px solid rgba(74,222,87,0.3);
+  position:relative;
+  transition:
+    background var(--dur-mid) var(--spring), border-color var(--dur-mid) var(--smooth),
+    box-shadow var(--dur-mid) var(--smooth), transform var(--dur-slow) var(--spring),
+    border-radius var(--dur-slow) var(--spring);
+}
+.sex-circle::after { content:''; position:absolute; inset:30%; border-radius:50%; background:var(--black); opacity:.25; }
+.sex-circle.selected {
+  background:linear-gradient(135deg, rgba(74,222,87,0.8) 0%, #2a8c31 100%);
+  border-color:var(--green-bright);
+  box-shadow:0 0 0 4px rgba(74,222,87,0.22), var(--neon-md);
+  transform:scale(1); /* Return to normal size */
+  border-radius:50%;  /* Keep perfectly round */
+}
+.sex-btn:hover .sex-circle:not(.selected) {
+  transform:scale(1.12); /* Only grow on hover */
+  border-color:rgba(74,222,87,0.7);
+  background:linear-gradient(135deg, rgba(74,222,87,0.22) 0%, rgba(30,60,32,0.6) 100%);
+  border-radius:50%; /* Keep perfectly round on hover */
+  box-shadow:var(--neon-sm);
+}
+.sex-label { font-family:var(--font-display); font-size:11px; letter-spacing:2px; color:var(--green); text-shadow:var(--neon-sm); }
+
+/* Unit toggles */
+.unit-toggle-row { display:flex; gap:6px; }
+.unit-btn {
+  font-family:var(--font-display); font-size:10px; letter-spacing:2px;
+  background:rgba(74,222,87,0.08); border:1px solid rgba(74,222,87,0.22);
+  color:var(--grey); padding:5px 14px; border-radius:20px; cursor:pointer;
+  transition:all var(--dur-mid) var(--spring);
+}
+.unit-btn.active {
+  background:linear-gradient(135deg, rgba(74,222,87,0.25) 0%, rgba(30,80,34,0.6) 100%);
+  border-color:var(--green); color:var(--green);
+  text-shadow:var(--neon-sm); box-shadow:var(--neon-sm);
+}
+.unit-btn:hover:not(.active) { border-color:var(--green); color:var(--green); transform:scale(1.1); border-radius:20px; box-shadow:var(--neon-sm); }
+.unit-btn:active { transform:scale(0.88) !important; }
+
+/* Proceed button */
+.btn-proceed {
+  font-family:var(--font-display); font-size:16px; letter-spacing:4px;
+  color:var(--green); background:transparent;
+  border:2px solid var(--green);
+  padding:14px 40px; cursor:pointer; border-radius:6px;
+  text-transform:uppercase;
+  text-shadow:var(--neon-sm);
+  box-shadow:var(--neon-sm);
+  transition:
+    background var(--dur-mid) var(--smooth), color var(--dur-fast) var(--snappy),
+    box-shadow var(--dur-mid) var(--smooth), transform var(--dur-mid) var(--spring),
+    border-radius var(--dur-slow) var(--spring), letter-spacing var(--dur-mid) var(--smooth),
+    padding var(--dur-mid) var(--spring), text-shadow var(--dur-mid) var(--smooth);
+}
+.btn-proceed:hover {
+  background:linear-gradient(135deg, var(--green) 0%, #2a8c31 100%);
+  color:var(--black); text-shadow:none;
+  box-shadow:var(--neon-lg), 0 8px 28px rgba(74,222,87,0.25);
+  transform:scale(1.06) translateY(-2px);
+  border-radius:44px; letter-spacing:7px; padding:14px 54px;
+}
+.btn-proceed:active { transform:scale(0.95) translateY(0) !important; border-radius:8px !important; }
+
     </style>
 </head>
 <body>
-    <div class="form-box">
-        <h2>ATHLETE PROFILE ENGINE</h2>
-        <form method="POST" action="/onboarding">
-            <label>Age Target</label>
-            <input type="number" name="age" required>
-            <label>Weight (kg)</label>
-            <input type="number" name="weight" required>
-            <label>Height (cm)</label>
-            <input type="number" name="height" required>
-            <label>Gender Mapping</label>
-            <select name="gender" required>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-            </select>
-            <label>Primary Biomechanical Objective</label>
-            <input type="text" name="goal" placeholder="e.g., V-Taper Morph, Muscle-Up Unlock" required>
-            <button type="submit">COMPILE & BOOT SYSTEM</button>
-        </form>
+<div id="screen-bmi" class="screen active">
+  <div class="amb bmi-blob1"></div>
+  <div class="amb bmi-blob2"></div>
+  <div class="bmi-content">
+    <div class="welcome-to">Welcome to</div>
+    <div class="logo-secondary">CONSISFIT</div>
+    <div class="bmi-subtitle">Calculate BMI &amp; Start Your Journey</div>
+    <div class="form-card">
+      <div class="form-row">
+        <div class="form-label">AGE</div>
+        <div class="input-wrap">
+          <input class="form-input" id="inp-age" type="number" min="10" max="80" placeholder="e.g. 22">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">WEIGHT</div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <div class="unit-toggle-row">
+            <button class="unit-btn active" id="btn-kg"  onclick="setWeightUnit('kg')">KG</button>
+            <button class="unit-btn"        id="btn-lbs" onclick="setWeightUnit('lbs')">LBS</button>
+          </div>
+          <div class="input-wrap">
+            <input class="form-input" id="inp-weight" type="number" placeholder="e.g. 70">
+            <span class="input-unit" id="unit-weight">KG</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">HEIGHT</div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          <div class="unit-toggle-row">
+            <button class="unit-btn active" id="btn-cm" onclick="setHeightUnit('cm')">CM</button>
+            <button class="unit-btn"        id="btn-ft" onclick="setHeightUnit('ft')">FT</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="input-wrap" id="height-cm-wrap" style="flex:1">
+              <input class="form-input" id="inp-height" type="number" placeholder="e.g. 175">
+              <span class="input-unit">CM</span>
+            </div>
+            <div id="height-ft-wrap" style="display:none;flex:1">
+              <div class="input-wrap" style="width:100%">
+                <input class="form-input" id="inp-feet" type="number" step="0.01" placeholder="e.g. 5.9">
+                <span class="input-unit">FT</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sex-row">
+        <div class="form-label">SEX</div>
+        <div class="sex-options">
+          <div class="sex-btn" onclick="selectSex('male')">
+            <div class="sex-circle" id="sex-male"></div>
+            <div class="sex-label">MALE</div>
+          </div>
+          <div class="sex-btn" onclick="selectSex('female')">
+            <div class="sex-circle" id="sex-female"></div>
+            <div class="sex-label">FEMALE</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center">
+        <button class="btn-proceed" onclick="proceedFromBMI()">PROCEED</button>
+      </div>
     </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
 </body>
+<script>
+function showToast(msg,dur=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+let state={
+  currentLevel:1,totalXP:0,sex:'male',age:22,weight:70,height:175,bmi:0,
+  reps:0,sets:1,allTimeReps:{},streak:[1],currentWorkoutLevel:1,camOpen:false,
+  weightUnit:'kg',heightUnit:'cm',nutrition:null
+};
+function selectSex(s){
+  state.sex=s;
+  document.getElementById('sex-male').classList.toggle('selected',s==='male');
+  document.getElementById('sex-female').classList.toggle('selected',s==='female');
+}
+selectSex('male');
+
+function setWeightUnit(u){
+  state.weightUnit=u;
+  document.getElementById('btn-kg').classList.toggle('active',u==='kg');
+  document.getElementById('btn-lbs').classList.toggle('active',u==='lbs');
+  document.getElementById('unit-weight').textContent=u.toUpperCase();
+  const inp=document.getElementById('inp-weight');
+  inp.placeholder=u==='kg'?'e.g. 70':'e.g. 154'; inp.value='';
+}
+function setHeightUnit(u){
+  state.heightUnit=u;
+  document.getElementById('btn-cm').classList.toggle('active',u==='cm');
+  document.getElementById('btn-ft').classList.toggle('active',u==='ft');
+  document.getElementById('height-cm-wrap').style.display=u==='cm'?'block':'none';
+  document.getElementById('height-ft-wrap').style.display=u==='ft'?'flex':'none';
+}
+
+function getWeightKg(){const v=+document.getElementById('inp-weight').value; return state.weightUnit==='lbs'?v*0.453592:v;}
+function getHeightCm(){
+  if(state.heightUnit==='cm') return +document.getElementById('inp-height').value;
+  return (+document.getElementById('inp-feet').value||0)*30.48;
+}
+
+async function proceedFromBMI(){
+  const age=+document.getElementById('inp-age').value;
+  const wKg=getWeightKg(),hCm=getHeightCm();
+  if(!age||!wKg||!hCm){showToast('⚠ Please fill all fields');return;}
+  state.age=age; state.weight=+wKg.toFixed(1); state.height=+hCm.toFixed(1);
+  const hm=hCm/100; state.bmi=+(wKg/(hm*hm)).toFixed(1);
+  let bmr=state.sex==='male'?88.362+(13.397*wKg)+(4.799*hCm)-(5.677*age):447.593+(9.247*wKg)+(3.098*hCm)-(4.330*age);
+  const tdee=Math.round(bmr*1.55);
+  state.nutrition={cal:tdee,carb:Math.round(tdee*0.4/4),prot:Math.round(wKg*2),fat:Math.round(tdee*0.25/9)};
+  
+  const btn = document.querySelector('.btn-proceed');
+  btn.textContent = 'SAVING...';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const response = await fetch('/api/update_profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        age: state.age,
+        weight: state.weight,
+        height: state.height,
+        gender: state.sex === 'male' ? 'Male' : 'Female',
+        goal: 'Calisthenics Conditioning' // Start with a default goal
+      })
+    });
+    
+    if(response.ok) {
+      window.location.href = '/hub'; // Go directly to the Hub after saving!
+    } else {
+      showToast('⚠ Failed to save profile to database.');
+      btn.textContent = 'PROCEED';
+      btn.style.pointerEvents = 'auto';
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('⚠ Database offline. Cannot save BMI.');
+    btn.textContent = 'PROCEED';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+</script>
 </html>

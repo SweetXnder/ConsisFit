@@ -32,9 +32,32 @@ except Exception:
 
 # --- RESTFUL ROUTING LAYERS ---
 @app.route('/')
-def index():
+def landing():
+    return render_template('landing.html')
+
+@app.route('/start')
+def start_router():
+    """Handles logic for existing vs new users when pressing START"""
+    if java_backend and java_backend.checkProfileExists():
+        return redirect(url_for('hub'))
+    return redirect(url_for('onboarding'))
+
+@app.route('/hub')
+def hub():
     if java_backend and not java_backend.checkProfileExists():
         return redirect(url_for('onboarding'))
+    return render_template('hub.html')
+
+@app.route('/func')
+def func():
+    if java_backend and not java_backend.checkProfileExists():
+        return redirect(url_for('onboarding'))
+    return render_template('func.html')
+
+@app.route('/index')
+def index():
+    if java_backend and not java_backend.checkProfileExists():
+        return redirect(url_for('landing'))
     return render_template('index.html')
 
 @app.route('/onboarding', methods=['GET', 'POST'])
@@ -89,7 +112,7 @@ def get_daily_plan():
     profile = java_backend.fetchProfile().split(",")
     if len(profile) < 5: return jsonify({"error": "Profile parsing fault."})
 
-    csv_path = "/Users/xander/IdeaProjects/GymRat/workout_history.csv"
+    csv_path = "workout_history.csv"
     v_loaded = 0
     active_days = set()
     if os.path.exists(csv_path):
@@ -209,17 +232,43 @@ def upload_video():
     file.save(filepath)
     return jsonify({"filepath": filepath}), 200
 
+# Normalize frontend exercise names to backend EXERCISE_CONFIG keys
+EXERCISE_NAME_MAP = {
+    "Wall Push Up": "Push-Ups",
+    "Knee Push Up": "Push-Ups",
+    "Standard Push Up": "Push-Ups",
+    "Diamond Push Up": "Push-Ups",
+    "Pike Push Up": "Push-Ups",
+    "Archer Push Up": "Push-Ups",
+    "Pseudo Planche Lean": "Planks",
+    "Standard Push Ups": "Push-Ups",
+    "Handstand Push Ups": "Handstand Push-Ups",
+    "Hanging Leg Raises": "Hanging Leg Raises",
+    "Pull-Ups": "Pull-Ups",
+    "Squats": "Squats",
+    "Lunges": "Lunges",
+    "Dips": "Dips",
+    "Planks": "Planks",
+    "Planks (Isometric Apex)": "Planks",
+}
+
 @app.route('/video_feed')
 def video_feed():
-    # Pass the Java Gateway down to the Engine
-    return Response(VisionEngine.generate_frames(request.args.get('exercise', 'Push-Ups'), request.args.get('source', '0'), java_backend), mimetype='multipart/x-mixed-replace; boundary=frame')
+    raw_exercise = request.args.get('exercise', 'Push-Ups')
+    exercise = EXERCISE_NAME_MAP.get(raw_exercise, raw_exercise)
+    return Response(VisionEngine.generate_frames(exercise, request.args.get('source', '0'), java_backend), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/api/stats')
 def get_stats():
-    csv_path = "/Users/xander/IdeaProjects/GymRat/workout_history.csv"
+    import datetime
+    csv_path = "workout_history.csv"
     total_volume = highest_rep = 0
     highest_rep_exercise = "None"
     active_days = set()
+    streak_dates = []  # day-of-month integers for the current month
+    now = datetime.datetime.now()
+    current_month = now.strftime("%b")  # e.g. "May"
+    current_year = str(now.year)
     if os.path.exists(csv_path):
         with open(csv_path, 'r') as f:
             for row in f:
@@ -232,8 +281,14 @@ def get_stats():
                             total_volume += val
                             if val > highest_rep: highest_rep, highest_rep_exercise = val, ex_name
                         else: total_volume += val
-                        d_chunk = parts[3].split()
+                        # Parse Java Date.toString() format: "dow mon dd hh:mm:ss zzz yyyy"
+                        d_chunk = parts[3].strip().split()
                         active_days.add(f"{d_chunk[1]} {d_chunk[2]}")
+                        # Extract day-of-month for the current month's streak
+                        if len(d_chunk) >= 6 and d_chunk[1] == current_month and d_chunk[5] == current_year:
+                            day_num = int(d_chunk[2])
+                            if day_num not in streak_dates:
+                                streak_dates.append(day_num)
                     except: pass
     
     total_xp = total_volume * 15
@@ -248,7 +303,8 @@ def get_stats():
         "level": (total_xp // 1000) + 1, "xp": total_xp, 
         "streak": len(active_days), "workouts_logged": len(active_days),
         "total_volume": total_volume, "highest_rep": highest_rep,
-        "highest_rep_exercise": highest_rep_exercise, "milestones": milestones[:3]
+        "highest_rep_exercise": highest_rep_exercise, "milestones": milestones[:3],
+        "streak_dates": sorted(streak_dates)
     })
 
 if __name__ == "__main__":
