@@ -1,0 +1,43 @@
+CHANGELOG 
+Notes:
+
+* Fixed/Adjustments
++ added feature
+!!! Main priority
+= Bug Fix
+
+---LANDING.HTML--- (Finished)
+
++ Created this file to reduce html code length on index.html
+* Fixed the awkward cut when the button is hovered
+* Optimized on mobile devices
++ Smooth Transition to the next webpage
+* Made the hint label more visible and bigger
+* Set as a default webpage
+* Added logic to main.py if there is an existing user goes directly to hub.html
+
+---onboaring html--- (Finished)
+= Fill dialogue will disappear when triggered (it only hides at the bottom of the webpage it is visible for mobile devices)
+* Remove the arrow keys on fill texts
+* Fixed the sex button not showing its full color
+* Optimize on mobile devices
+= Button Layout fix
+
+---hub.html--- (Finished)
+* Optimize on Mobile Devices
++ Add Scroll Feature (Mobile Devices)
+* Remove Matrices Feature Dialogue after the message is shown
++ Add Proggress Insights
++ Shows the Mapping tree on screen-workout class (desktop only)
++ Adds a map animation everytime the user first visited the site
+
+
+--Tracker.html--- (Pending)
+!!! (=) Fix the API connection between AI and QROC
+!!! (=) Fix the progression
++ Mobile implementation
+* Fix the scroll feature at the AI chatbox
+* When pressed back, go back to index.html
+* Change the "streak" calendar from circle to filled square
+
+
