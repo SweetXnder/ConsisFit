@@ -232,32 +232,13 @@ def upload_video():
     file.save(filepath)
     return jsonify({"filepath": filepath}), 200
 
-# Normalize frontend exercise names to backend EXERCISE_CONFIG keys
-EXERCISE_NAME_MAP = {
-    "Wall Push Up": "Push-Ups",
-    "Knee Push Up": "Push-Ups",
-    "Standard Push Up": "Push-Ups",
-    "Diamond Push Up": "Push-Ups",
-    "Pike Push Up": "Push-Ups",
-    "Archer Push Up": "Push-Ups",
-    "Pseudo Planche Lean": "Planks",
-    "Standard Push Ups": "Push-Ups",
-    "Handstand Push Ups": "Handstand Push-Ups",
-    "Hanging Leg Raises": "Hanging Leg Raises",
-    "Pull-Ups": "Pull-Ups",
-    "Squats": "Squats",
-    "Lunges": "Lunges",
-    "Dips": "Dips",
-    "Planks": "Planks",
-    "Planks (Isometric Apex)": "Planks",
-}
 
 @app.route('/video_feed')
 def video_feed():
-    raw_exercise = request.args.get('exercise', 'Push-Ups')
-    exercise = EXERCISE_NAME_MAP.get(raw_exercise, raw_exercise)
-    return Response(VisionEngine.generate_frames(exercise, request.args.get('source', '0'), java_backend), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(VisionEngine.generate_frames(request.args.get('exercise', 'Push-Ups'), request.args.get('source', '0'), java_backend),
+    mimetype='multipart/x-mixed-replace; boundary=frame')
 
+# Added label where the month is seen
 @app.route('/api/stats')
 def get_stats():
     import datetime
@@ -267,7 +248,7 @@ def get_stats():
     active_days = set()
     streak_dates = []  # day-of-month integers for the current month
     now = datetime.datetime.now()
-    current_month = now.strftime("%b")  # e.g. "May"
+    current_month = now.strftime("%b")
     current_year = str(now.year)
     if os.path.exists(csv_path):
         with open(csv_path, 'r') as f:
@@ -281,7 +262,7 @@ def get_stats():
                             total_volume += val
                             if val > highest_rep: highest_rep, highest_rep_exercise = val, ex_name
                         else: total_volume += val
-                        # Parse Java Date.toString() format: "dow mon dd hh:mm:ss zzz yyyy"
+                        # Addition date formatting
                         d_chunk = parts[3].strip().split()
                         active_days.add(f"{d_chunk[1]} {d_chunk[2]}")
                         # Extract day-of-month for the current month's streak
