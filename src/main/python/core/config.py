@@ -3,7 +3,7 @@ import os
 UPLOAD_FOLDER = 'src/main/python/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-GROQ_API_KEY = "GROQ API KEY DITO"
+GROQ_API_KEY = "GROQ_API_KEY_PLACEHOLDER"  # Replace with your actual Groq API key
 
 EXERCISE_CONFIG = {
     "Push-Ups":           {"joints": ("SHOULDER", "ELBOW", "WRIST"), "down": 100, "up": 150, "mode": "rep", "trigger": "up"},

@@ -4,4 +4,4 @@ mediapipe
 groq
 py4j
 numpy
-werkzeug
+werkzeug    

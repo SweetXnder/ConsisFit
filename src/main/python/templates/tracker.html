@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONSISFIT – Personalize Calisthenics Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   CSS VARIABLES
+   ============================================= */
+:root {
+  --green:       #4ade57;
+  --green-bright:#6fff79;
+  --green-dim:   #2a8c31;
+  --green-glow:  rgba(74,222,87,0.45);
+  --green-dark:  #1a5c1f;
+  --black:       #050505;
+  --dark:        #0d0d0d;
+  --card:        #111;
+  --white:       #f0f0f0;
+  --grey:        #888;
+ 
+  --font-display:'Black Ops One', cursive;
+  --font-body:   'Rajdhani', sans-serif;
+  --font-mono:   'Orbitron', monospace;
+ 
+  --spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --smooth:  cubic-bezier(0.23, 1.00, 0.32, 1);
+  --snappy:  cubic-bezier(0.40, 0.00, 0.20, 1);
+ 
+  --dur-fast:  0.18s;
+  --dur-mid:   0.35s;
+  --dur-slow:  0.55s;
+  --dur-xslow: 0.80s;
+ 
+  --neon-sm:  0 0 6px #4ade57, 0 0 14px rgba(74,222,87,0.6);
+  --neon-md:  0 0 8px #4ade57, 0 0 22px rgba(74,222,87,0.65), 0 0 44px rgba(74,222,87,0.3);
+  --neon-lg:  0 0 10px #4ade57, 0 0 30px rgba(74,222,87,0.7), 0 0 70px rgba(74,222,87,0.35), 0 0 120px rgba(74,222,87,0.15);
+  --neon-txt: 0 0 7px #4ade57, 0 0 18px rgba(74,222,87,0.8), 0 0 36px rgba(74,222,87,0.4);
+  --neon-txt-lg: 0 0 10px #6fff79, 0 0 28px rgba(74,222,87,0.9), 0 0 60px rgba(74,222,87,0.5), 0 0 100px rgba(74,222,87,0.2);
+}
+ 
+/* =============================================
+   RESET & SCREEN SYSTEM
+   ============================================= */
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--black); font-family:var(--font-body); color:var(--white); }
+.screen { position:fixed; inset:0; width:100%; height:100%; display:none; overflow-y:auto; z-index:1; }
+.screen.active { display:flex; flex-direction:column; }
+body::after {
+  content:''; position:fixed; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+  pointer-events:none; z-index:9999;
+}
+#particles { position:fixed; inset:0; pointer-events:none; z-index:0; }
+ 
+button, input {
+  transition: all var(--dur-mid) var(--smooth);
+  position:relative; overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+
+.btn-back-workout {
+  font-family:var(--font-display); font-size:13px; letter-spacing:3px;
+  background:rgba(20,20,20,0.8); border:1px solid rgba(120,120,120,0.25);
+  color:var(--grey); padding:10px 24px; cursor:pointer; border-radius:6px;
+  align-self:flex-start; text-transform:uppercase;
+  transition: all var(--dur-mid) var(--smooth);
+}
+.btn-back-workout:hover {
+  color:var(--white); border-color:rgba(230,230,230,0.4);
+  transform:translateX(-7px) scale(1.03); border-radius:22px;
+  background:rgba(40,40,40,0.85); letter-spacing:4px;
+  box-shadow:0 0 14px rgba(255,255,255,0.06);
+}
+
+/* =============================================
+   TRACKER GRID
+   ============================================= */
+#screen-tracker {
+  background:radial-gradient(ellipse 100% 60% at 50% 0%, #091409 0%, #050505 55%);
+  grid-template-rows:1fr auto; gap:12px; padding:16px; overflow:hidden;
+}
+#screen-tracker.active { display:grid; }
+.tracker-top { display:grid; grid-template-columns:1fr 320px; grid-template-rows:auto 1fr; gap:12px; min-height:0; height:100%; }
+.cam-area { grid-column:1; grid-row:1 / span 2; }
+.streak-panel { grid-column:2; grid-row:1; }
+.chatbot-panel { grid-column:2; grid-row:2; }
+ 
+/* Camera Area */
+.cam-area {
+  background:linear-gradient(135deg, rgba(8,30,10,0.5) 0%, rgba(4,14,6,0.7) 100%);
+  border:2px solid rgba(74,222,87,0.3);
+  border-radius:16px; display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden; min-height:360px;
+  box-shadow:0 0 30px rgba(74,222,87,0.07), inset 0 0 40px rgba(74,222,87,0.03);
+  transition: all var(--dur-mid) var(--smooth);
+}
+.cam-placeholder { font-family:var(--font-display); font-size:16px; letter-spacing:3px; color:rgba(74,222,87,0.45); text-align:center; text-shadow:var(--neon-sm); flex-direction:column; align-items:center; }
+.cam-btn {
+  position:absolute; top:16px; right:16px; z-index:5;
+  font-family:var(--font-display); font-size:11px; letter-spacing:2px;
+  background:linear-gradient(135deg, rgba(74,222,87,0.15) 0%, rgba(20,60,22,0.5) 100%);
+  border:1px solid rgba(74,222,87,0.5); color:var(--green);
+  padding:8px 14px; border-radius:22px; cursor:pointer;
+  text-shadow:var(--neon-sm); box-shadow:var(--neon-sm);
+  transition: all var(--dur-mid) var(--smooth);
+}
+.cam-btn:hover {
+  background:linear-gradient(135deg, rgba(74,222,87,0.3) 0%, rgba(30,80,32,0.7) 100%);
+  box-shadow:var(--neon-md); border-radius:10px; transform:scale(1.08); letter-spacing:3px;
+}
+.cam-active-text { font-family:var(--font-display); font-size:clamp(13px,2vw,19px); letter-spacing:2px; color:var(--white); text-align:center; z-index:3; position:absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 8px;}
+.cam-active-text span { color:var(--green-bright); text-shadow:var(--neon-sm); }
+ 
+/* Streak Panel */
+.streak-panel {
+  background:linear-gradient(160deg, rgba(10,24,12,0.96) 0%, rgba(6,12,7,0.98) 100%);
+  border:1px solid rgba(74,222,87,0.18); border-radius:16px; padding:16px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.streak-title { font-family:var(--font-display); font-size:13px; letter-spacing:3px; color:var(--green); text-shadow:var(--neon-sm); text-align:center; }
+.streak-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.streak-cell {
+  aspect-ratio:1; border-radius:2px; /* SQUARE BUBBLES */
+  background:transparent;
+  border:1.5px solid rgba(74,222,87,0.3);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-mono); font-size:10px; color:rgba(255,255,255,0.4);
+}
+.streak-cell.done {
+  background:linear-gradient(135deg, rgba(74,222,87,0.8) 0%, rgba(30,80,32,0.9) 100%);
+  border-color:var(--green-bright); color:var(--black); font-weight:bold;
+  box-shadow:0 0 10px rgba(74,222,87,0.4);
+}
+
+/* Chatbot */
+.chatbot-panel {
+  background:linear-gradient(160deg, rgba(6,16,8,0.98) 0%, rgba(4,10,5,0.99) 100%);
+  border:1px solid rgba(74,222,87,0.18); border-radius:12px;
+  flex:1; display:flex; flex-direction:column; overflow:hidden;
+}
+.chatbot-header { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid rgba(74,222,87,0.1); background:linear-gradient(90deg, rgba(74,222,87,0.04) 0%, transparent 100%); }
+.chatbot-avatar {
+  width:32px; height:32px; border-radius:50%;
+  background:linear-gradient(135deg, var(--green-bright) 0%, #2a8c31 100%);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-size:10px; color:var(--black);
+}
+.chatbot-name { font-family:var(--font-display); font-size:11px; letter-spacing:2px; color:var(--green); text-shadow:var(--neon-sm); }
+
+/* CRITICAL FIX: Scrolling behavior */
+.chat-messages {
+  flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;
+  font-size: 12px; font-family: var(--font-body);
+  min-height: 0; 
+}
+.chat-msg {
+  background:linear-gradient(90deg, rgba(74,222,87,0.07) 0%, rgba(20,50,22,0.3) 100%);
+  border-left:2px solid var(--green); padding:8px 10px; border-radius:0 6px 6px 0;
+  color:var(--white); line-height:1.5;
+}
+
+.chat-messages::-webkit-scrollbar { width:6px; }
+.chat-messages::-webkit-scrollbar-track { background:rgba(10,24,12,0.4); border-radius:4px; }
+.chat-messages::-webkit-scrollbar-thumb { background:rgba(74,222,87,0.3); border-radius:4px; }
+
+.chat-input-row { display:flex; gap:6px; padding:8px; border-top:1px solid rgba(74,222,87,0.09); }
+.chat-input {
+  flex:1; background:linear-gradient(135deg, rgba(74,222,87,0.07) 0%, rgba(10,28,12,0.6) 100%);
+  border:1px solid rgba(74,222,87,0.2); border-radius:6px;
+  padding:8px 10px; color:var(--white); font-family:var(--font-body); font-size:12px; outline:none;
+}
+.chat-send {
+  background:linear-gradient(135deg, var(--green) 0%, #2a8c31 100%);
+  border:none; border-radius:6px; padding:8px 12px; cursor:pointer; color:var(--black);
+  font-family:var(--font-display); font-size:10px; font-weight: bold;
+}
+
+/* Tracker Bottom Buttons & Stats */
+.tracker-bottom { display:grid; grid-template-columns:1fr auto auto auto; gap:12px; align-items:center; }
+.stats-bar {
+  position:absolute; bottom:16px; left:16px; z-index:10; backdrop-filter:blur(4px);
+  background:linear-gradient(135deg, rgba(10,24,12,0.95) 0%, rgba(6,14,8,0.98) 100%);
+  border:1px solid rgba(74,222,87,0.2); border-radius:12px; padding:14px 24px;
+  display:flex; gap:32px; align-items:center;
+}
+.stat-col { text-align:center; }
+.stat-label { font-family:var(--font-mono); font-size:9px; letter-spacing:2px; color:rgba(74,222,87,0.6); text-shadow:var(--neon-sm); }
+.stat-val { font-family:var(--font-display); font-size:clamp(18px,2.8vw,30px); color:var(--white); margin-top:2px; }
+.stat-val.green { color:var(--green-bright); text-shadow:var(--neon-txt); }
+ 
+.btn-digest {
+  font-family:var(--font-display); font-size:11px; letter-spacing:2px;
+  background:linear-gradient(135deg, rgba(74,222,87,0.12) 0%, rgba(20,60,22,0.6) 100%);
+  border:1px solid rgba(74,222,87,0.45); color:var(--green);
+  padding:12px 20px; border-radius:10px; cursor:pointer;
+}
+.rep-counter-btn {
+  font-family:var(--font-display); font-size:13px; letter-spacing:2px;
+  background:linear-gradient(135deg, var(--green) 0%, #2a8c31 100%);
+  border:none; color:var(--black); padding:12px 28px; border-radius:10px; cursor:pointer; font-weight: bold;
+}
+
+.toast {
+  position:fixed; bottom:30px; left:50%; 
+  transform:translateX(-50%) translateY(150px) scale(0.9);
+  background:linear-gradient(135deg, rgba(10,28,12,0.97) 0%, rgba(6,16,8,0.99) 100%);
+  border:1px solid rgba(74,222,87,0.5);
+  color:var(--green); font-family:var(--font-display); font-size:13px;
+  letter-spacing:2px; padding:14px 30px; border-radius:8px; z-index:1000;
+  box-shadow:var(--neon-md); text-shadow:var(--neon-sm);
+  transition:transform 0.5s var(--spring), border-radius 0.5s var(--spring), opacity 0.3s var(--snappy);
+}
+.toast.show { transform:translateX(-50%) translateY(0) scale(1); opacity: 1; pointer-events: auto; border-radius:28px; }
+
+.levelup-overlay {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 0.4s var(--snappy);
+}
+.levelup-overlay.show { opacity:1; pointer-events:all; backdrop-filter:blur(8px); }
+.levelup-title { font-family:var(--font-display); font-size:clamp(38px,7.5vw,76px); color:var(--green-bright); text-shadow:var(--neon-txt-lg); line-height:1; }
+.levelup-sub { font-family:var(--font-body); font-size:18px; letter-spacing:4px; color:rgba(74,222,87,0.8); }
+.levelup-btn { margin-top:26px; font-family:var(--font-display); font-size:16px; color:var(--black); background:linear-gradient(135deg, var(--green-bright) 0%, #2a8c31 100%); border:none; padding:14px 42px; cursor:pointer; border-radius:6px; }
+
+@media (max-width:900px) {
+  #screen-tracker { display:flex; flex-direction:column; overflow-y:auto; padding-bottom:100px; }
+  .tracker-top { display:flex; flex-direction:column; gap:16px; min-height:auto; height:auto; }
+  .cam-area { order:1; min-height:280px; }
+  .chatbot-panel { order:2; min-height:380px; height:380px; flex:none; }
+  .streak-panel { order:3; flex:none; }
+  .tracker-bottom { display:flex; flex-direction:row; gap:12px; order:-1; margin-bottom:12px; }
+  .tracker-bottom > div { display:none; }
+  .btn-back-workout { margin:0; padding:12px 10px; font-size:11px; flex:1; text-align:center; }
+  .stats-bar { top:12px; right:12px; bottom:auto; left:auto; padding:6px 12px; gap:16px; }
+  .stat-val { font-size:18px !important; }
+  .cam-btn { top:auto; bottom:16px; right:16px; }
+  .btn-digest { padding:12px 10px; margin:0; font-size:11px; flex:1; text-align:center; }
+  .rep-counter-btn { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:400px; z-index:1001; padding:16px; font-size:16px; }
+}
+</style>
+</head>
+<body>
+<div id="screen-tracker" class="screen active">
+  <div class="tracker-top">
+    
+    <div class="cam-area" id="cam-area">
+      <div class="cam-placeholder" id="cam-placeholder" style="display:flex;">
+        <div style="font-size:36px;margin-bottom:8px;filter:drop-shadow(0 0 10px #4ade57)">📷</div>
+        <div>CAMERA FEED</div>
+        <div style="font-size:11px;color:rgba(74,222,87,0.6);margin-top:6px;letter-spacing:2px">FORM DETECTION READY</div>
+      </div>
+      
+      <img id="ai-feed" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:14px;position:relative;z-index:1;">
+      
+      <input type="file" id="videoFile" accept="video/*" style="display:none;" onchange="handleVideoUpload(this)">
+
+      <div id="cam-active-info" class="cam-active-text" style="display:none;">
+        <div>📡 TRACKING ACTIVE</div>
+        <div style="font-size:13px;margin-top:4px">Exercise: <span id="cam-ex-name">Push Up</span></div>
+      </div>
+      <button class="cam-btn" id="cam-btn" onclick="toggleCamera()">OPEN CAM</button>
+      
+      <div class="stats-bar">
+        <div class="stat-col"><div class="stat-label">REP(S)</div><div class="stat-val" id="tr-reps">0</div></div>
+        <div class="stat-col"><div class="stat-label">STATUS</div><div class="stat-val green" id="tr-status">READY</div></div>
+      </div>
+    </div>
+    
+    <div class="streak-panel">
+      <div class="streak-title">STREAK FOR THE MONTH</div>
+      <div class="streak-grid" id="streak-grid"></div>
+    </div>
+    <div class="chatbot-panel">
+      <div class="chatbot-header">
+        <div class="chatbot-avatar">CF</div>
+        <div>
+          <div class="chatbot-name">CONSISFIT AI</div>
+          <div style="font-size:9px;color:rgba(74,222,87,0.5)">Your fitness coach</div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chat-input" placeholder="Ask your coach..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">ASK</button>
+      </div>
+    </div>
+  </div>
+  <div class="tracker-bottom">
+    <div></div>
+    <button class="btn-digest" onclick="digestExercise()">DIGEST EXERCISE</button>
+    <button class="btn-back-workout" onclick="window.location.href='/hub'">← BACK</button>
+    <button class="rep-counter-btn" onclick="countRep()">+ REP</button>
+  </div>
+</div>
+ 
+<canvas id="particles"></canvas>
+<div class="toast" id="toast"></div>
+ 
+<div class="levelup-overlay" id="levelup-overlay">
+  <div class="levelup-card">
+    <div style="font-size:80px;filter:drop-shadow(0 0 20px #4ade57);animation:ambFloat 1s ease-in-out infinite">⚡</div>
+    <div class="levelup-title" id="levelup-title">LEVEL UP!</div>
+    <div class="levelup-sub" id="levelup-sub">You reached Level 2</div>
+    <button class="levelup-btn" onclick="closeLevelUp()">CONTINUE</button>
+  </div>
+</div>
+ 
+<script>
+
+let telemetryInterval = null;
+let lastFeedback = "";
+
+// 1. UPDATED TOGGLE CAMERA (Starts Polling)
+function toggleCamera() {
+    const btn = document.getElementById('cam-btn');
+    const area = document.getElementById('cam-area');
+    const img = document.getElementById('ai-feed');
+    const ph = document.getElementById('cam-placeholder');
+    const ai = document.getElementById('cam-active-info');
+    const exName = WORKOUTS[state.currentWorkoutLevel-1].name;
+
+    if (!state.camOpen) {
+        ph.style.display = 'none';
+        img.style.display = 'block';
+        img.src = `/video_feed?exercise=${encodeURIComponent(exName)}&source=0`;
+        
+        ai.style.display = 'block';
+        area.classList.add('cam-open'); 
+        btn.textContent = 'STOP FEED'; 
+        state.camOpen = true;
+        document.getElementById('cam-ex-name').textContent = exName;
+        
+        // Start polling the Python backend for rep data
+        telemetryInterval = setInterval(fetchLiveTelemetry, 300);
+    } else {
+        img.src = "";
+        img.style.display = 'none';
+        ph.style.display = 'flex';
+        ph.innerHTML = '<div style="font-size:36px;margin-bottom:8px;filter:drop-shadow(0 0 10px #4ade57)">📷</div><div>CAMERA FEED</div><div style="font-size:11px;color:rgba(74,222,87,0.6);margin-top:6px;letter-spacing:2px">FORM DETECTION READY</div>';
+        
+        ai.style.display = 'none'; 
+        area.classList.remove('cam-open'); 
+        btn.textContent = 'OPEN CAM'; 
+        state.camOpen = false;
+        
+        clearInterval(telemetryInterval);
+        setTimeout(pullServerStats, 1500); 
+    }
+}
+
+// 2. NEW: POLL PYTHON FOR DATA
+async function fetchLiveTelemetry() {
+    try {
+        const res = await fetch('/api/telemetry');
+        const data = await res.json();
+
+        // Update Rep Counter UI
+        if (data.reps !== undefined) {
+            state.reps = data.reps;
+            document.getElementById('tr-reps').textContent = state.reps;
+        }
+
+        // Update Status UI
+        if (data.status) {
+            const el = document.getElementById('tr-status');
+            el.textContent = data.status.toUpperCase();
+            el.style.color = (data.status === 'PERFECT') ? 'var(--green-bright)' : 'var(--white)';
+        }
+
+        // Inject AI Feedback into Chat UI
+        if (data.feedback && data.feedback !== lastFeedback && data.feedback.trim() !== "") {
+            lastFeedback = data.feedback;
+            showToast("🚨 Coach: " + data.feedback, 2500);
+            addChat("🚨 Coach: " + data.feedback);
+        }
+    } catch (e) { /* silent poll */ }
+}
+
+// 3. DIGEST UPLOAD FUNCTION
+function digestExercise() {
+    document.getElementById('videoFile').click();
+}
+
+async function handleVideoUpload(input) {
+    if(input.files.length === 0) return;
+    const file = input.files[0];
+    showToast("⏳ Uploading...");
+
+    const img = document.getElementById('ai-feed');
+    const ph = document.getElementById('cam-placeholder');
+    const exName = WORKOUTS[state.currentWorkoutLevel-1].name;
+
+    const form = new FormData();
+    form.append('video', file);
+
+    const uploadRes = await fetch('/upload_video', { method: 'POST', body: form });
+    const uData = await uploadRes.json();
+    
+    if (uploadRes.ok) {
+        ph.style.display = 'none';
+        img.style.display = 'block';
+        img.src = `/video_feed?exercise=${encodeURIComponent(exName)}&source=${encodeURIComponent(uData.filepath)}`;
+        telemetryInterval = setInterval(fetchLiveTelemetry, 300);
+    }
+    input.value = "";
+}
+
+const WORKOUTS=[
+  {level:1,name:"Push-Ups",       reps:15,sets:3,xp:200,muscle:"Chest / Triceps"},
+  {level:2,name:"Squats",       reps:12,sets:3,xp:200,muscle:"Legs / Glutes"},
+  {level:3,name:"Lunges",   reps:11,sets:3,xp:200,muscle:"Legs"},
+  {level:4,name:"Dips",    reps:8, sets:3,xp:200,muscle:"Triceps / Chest"},
+  {level:5,name:"Pull-Ups",       reps:10,sets:3,xp:200,muscle:"Back / Lats"},
+  {level:6,name:"Handstand Push-Ups",     reps:6, sets:3,xp:200,muscle:"Shoulders"},
+  {level:7,name:"Hanging Leg Raises",   reps:5, sets:4,xp:200,muscle:"Core"},
+  {level:8,name:"Planks",  reps:5, sets:4,xp:200,muscle:"Core"}
+];
+
+let state={
+  currentLevel:1,totalXP:0,
+  reps:0,sets:1,allTimeReps:{},streak:[],currentWorkoutLevel:1,camOpen:false
+};
+ 
+function addChat(text) {
+  const target = document.getElementById('chat-messages');
+  target.innerHTML += `<div class="chat-msg" style="border-left-color: var(--green-bright);">${text}</div>`;
+  target.scrollTop = target.scrollHeight;
+}
+ 
+let chatInit=false;
+function initTracker(){
+  state.reps=0; state.sets=1;
+  updateStats(); 
+  renderStreak();
+  if(!chatInit){
+      chatInit=true; 
+      const w=WORKOUTS[state.currentWorkoutLevel-1]; 
+      addChat('Today: '+w.name+' · '+w.reps+' reps × '+w.sets+' sets. Target: '+w.muscle+'. Let\'s go! 💪');
+  }
+}
+ 
+function updateStats(){
+  const w=WORKOUTS[state.currentWorkoutLevel-1];
+  document.getElementById('tr-reps').textContent=state.reps;
+  document.getElementById('tr-sets').textContent=state.sets+'/'+w.sets;
+  const s=state.reps===0?'READY':state.reps<w.reps?'ACTIVE':'SET DONE';
+  const el=document.getElementById('tr-status');
+  el.textContent=s; el.style.color=state.reps>=w.reps?'var(--green-bright)':'var(--white)';
+}
+ 
+function countRep(){
+  const w=WORKOUTS[state.currentWorkoutLevel-1];
+  state.reps++; 
+  state.allTimeReps[state.currentWorkoutLevel]=(state.allTimeReps[state.currentWorkoutLevel]||0)+1;
+  updateStats();
+  if(state.reps>=w.reps){
+    if(state.sets<w.sets) {
+        setTimeout(()=>{state.sets++;state.reps=0;updateStats();showToast('💪 Set '+state.sets+' of '+w.sets+'!');},800);
+    } else {
+        setTimeout(()=>completeWorkout(),600);
+    }
+  }
+  const el=document.getElementById('tr-reps');
+  el.style.transform='scale(1.55)';el.style.color='var(--green-bright)';el.style.textShadow='var(--neon-txt)';
+  setTimeout(()=>{el.style.transform='scale(1)';el.style.color='var(--white)';el.style.textShadow='';},240);
+}
+ 
+// PROGRESSION FIX (Waits for Python Database)
+async function completeWorkout(){
+  const w = WORKOUTS[state.currentWorkoutLevel-1];
+  const totalRepsFinished = w.reps * w.sets;
+
+  try {
+      const res = await fetch('/api/save_workout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              exercise: w.name, 
+              completed_reps: totalRepsFinished
+          })
+      });
+      const data = await res.json();
+      console.log("Database Log Status:", data);
+
+      await pullServerStats(); 
+
+      const newLevel = Math.min(8, Math.floor(state.totalXP / 1000) + 1);
+      if(newLevel > state.currentLevel) { 
+          state.currentLevel = newLevel; 
+          showLevelUp(newLevel); 
+      } else {
+          showToast(`✅ Set Complete! Total Volume Logged.`);
+      }
+
+      addChat(`Great work! ${totalRepsFinished} reps of ${w.name} saved to database.`);
+  } catch (err) {
+      console.error("Save error:", err);
+      showToast("⚠️ Failed to sync with Java Database.");
+  }
+}
+
+// CHATBOT (WITH ERROR CATCH)
+async function sendChat() {
+  const box = document.getElementById('chat-input');
+  const q = box.value;
+  if (!q) return;
+ 
+  const target = document.getElementById('chat-messages');
+  target.innerHTML += `<div class="chat-msg" style="background: rgba(255,255,255,0.1); border-left-color: #888;">${q}</div>`;
+  box.value = "";
+  target.scrollTop = target.scrollHeight;
+ 
+  try {
+    const res = await fetch('/ask_coach', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question: q})
+    });
+    const data = await res.json();
+    
+    target.innerHTML += `<div class="chat-msg">${data.answer}</div>`;
+    target.scrollTop = target.scrollHeight;
+  } catch (e) {
+    target.innerHTML += `<div class="chat-msg" style="border-left-color: red;">[System Fault] Backend offline.</div>`;
+    target.scrollTop = target.scrollHeight;
+  }
+} 
+ 
+function renderStreak() {
+  const grid = document.getElementById('streak-grid');
+  grid.innerHTML = '';
+  
+  const date = new Date();
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const today = date.getDate(); 
+  
+  for(let i = 1; i <= daysInMonth; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'streak-cell';
+    cell.textContent = i; 
+    
+    if(state.streak.includes(i)) cell.classList.add('done');
+    if(i === today && !state.streak.includes(i)) cell.classList.add('today');
+    
+    grid.appendChild(cell);
+  }
+}
+ 
+function showLevelUp(lvl){
+  document.getElementById('levelup-title').textContent='LEVEL UP!';
+  document.getElementById('levelup-sub').textContent='You reached Level '+lvl+(WORKOUTS[lvl-1]?' · '+WORKOUTS[lvl-1].name+' unlocked!':'!');
+  document.getElementById('levelup-overlay').classList.add('show');
+}
+function closeLevelUp(){
+  document.getElementById('levelup-overlay').classList.remove('show');
+  showToast('🔓 New workout unlocked: '+WORKOUTS[state.currentLevel-1].name);
+}
+function showToast(msg,dur=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+ 
+// Background Particles
+(function(){
+  const canvas=document.getElementById('particles'),ctx=canvas.getContext('2d');
+  let W,H,P=[];
+  function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;}
+  resize(); window.addEventListener('resize',resize);
+  for(let i=0;i<70;i++) P.push({x:Math.random()*W||Math.random()*1400,y:Math.random()*H||Math.random()*900,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:Math.random()*1.4+.4,a:Math.random()});
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    P.forEach(p=>{
+      p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(74,222,87,${p.a*.42})`;ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+ 
+async function pullServerStats() {
+    try {
+        const statsRes = await fetch('/api/stats');
+        const data = await statsRes.json();
+        
+        state.currentLevel = data.level;
+        state.totalXP = data.xp;
+        
+        if (data.streak_dates && data.streak_dates.length > 0) {
+            state.streak = data.streak_dates;
+            renderStreak();
+        }
+    } catch (e) {
+        console.error("Stats sync delay:", e);
+    }
+}
+
+window.onload = async () => {
+    await pullServerStats(); // Wait for data to arrive from Java
+    initTracker();           // NOW render the UI with that data
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONSISFIT | The Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   CSS VARIABLES
+   ============================================= */
+:root {
+  --green:       #4ade57;
+  --green-bright:#6fff79;
+  --green-dim:   #2a8c31;
+  --green-glow:  rgba(74,222,87,0.45);
+  --green-dark:  #1a5c1f;
+  --black:       #050505;
+  --dark:        #0d0d0d;
+  --card:        #111;
+  --white:       #f0f0f0;
+  --grey:        #888;
+
+  --font-display:'Black Ops One', cursive;
+  --font-body:   'Rajdhani', sans-serif;
+  --font-mono:   'Orbitron', monospace;
+
+  /* Timing */
+  --spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+  --smooth:  cubic-bezier(0.23, 1.00, 0.32, 1);
+  --snappy:  cubic-bezier(0.40, 0.00, 0.20, 1);
+
+  --dur-fast:  0.18s;
+  --dur-mid:   0.35s;
+  --dur-slow:  0.55s;
+  --dur-xslow: 0.80s;
+
+  /* Neon glow definitions */
+  --neon-sm:  0 0 6px #4ade57, 0 0 14px rgba(74,222,87,0.6);
+  --neon-md:  0 0 8px #4ade57, 0 0 22px rgba(74,222,87,0.65), 0 0 44px rgba(74,222,87,0.3);
+  --neon-lg:  0 0 10px #4ade57, 0 0 30px rgba(74,222,87,0.7), 0 0 70px rgba(74,222,87,0.35), 0 0 120px rgba(74,222,87,0.15);
+  --neon-txt: 0 0 7px #4ade57, 0 0 18px rgba(74,222,87,0.8), 0 0 36px rgba(74,222,87,0.4);
+  --neon-txt-lg: 0 0 10px #6fff79, 0 0 28px rgba(74,222,87,0.9), 0 0 60px rgba(74,222,87,0.5), 0 0 100px rgba(74,222,87,0.2);
+}
+
+/* =============================================
+   RESET
+   ============================================= */
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--black); font-family:var(--font-body); color:var(--white); }
+
+/* =============================================
+   SCREEN SYSTEM
+   ============================================= */
+.screen { position:fixed; inset:0; width:100%; height:100%; display:none; overflow-y:auto; z-index:1; }
+.screen.active { display:flex; flex-direction:column; }
+
+/* Scanline */
+body::after {
+  content:''; position:fixed; inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);
+  pointer-events:none; z-index:9999;
+}
+#particles { position:fixed; inset:0; pointer-events:none; z-index:0; }
+
+/* =============================================
+   GLOBAL MORPH TRANSITIONS
+   ============================================= */
+button, input, .sex-btn, .tree-dot, .streak-cell,
+.macro-row, .profile-panel, .nutrition-panel,
+.streak-panel, .chatbot-panel, .form-card {
+  transition:
+    background    var(--dur-mid)  var(--smooth),
+    color         var(--dur-fast) var(--snappy),
+    border-color  var(--dur-mid)  var(--smooth),
+    box-shadow    var(--dur-mid)  var(--smooth),
+    transform     var(--dur-mid)  var(--spring),
+    border-radius var(--dur-slow) var(--spring),
+    letter-spacing var(--dur-mid) var(--smooth),
+    padding       var(--dur-mid)  var(--spring),
+    filter        var(--dur-mid)  var(--smooth);
+  position:relative; overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* Ripple */
+.ripple {
+  position:absolute; border-radius:50%;
+  background:rgba(74,222,87,0.25);
+  transform:scale(0);
+  animation:rippleAnim 0.65s var(--snappy) forwards;
+  pointer-events:none;
+}
+@keyframes rippleAnim { to { transform:scale(5); opacity:0; } }
+
+/* =============================================
+   AMBIENT GLOW BLOBS  (behind everything)
+   ============================================= */
+.amb {
+  position:absolute; border-radius:50%;
+  filter:blur(80px); pointer-events:none; z-index:0;
+  animation:ambFloat 8s ease-in-out infinite;
+}
+@keyframes ambFloat {
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-18px) scale(1.06)}
+}
+
+/* =============================================
+   NEON TEXT HELPERS
+   ============================================= */
+.neon-green {
+  color:var(--green);
+  text-shadow: var(--neon-txt);
+}
+.neon-green-lg {
+  color:var(--green-bright);
+  text-shadow: var(--neon-txt-lg);
+}
+
+/* =============================================
+   SCREEN 3 — HUB
+   ============================================= */
+#screen-hub {
+  background:radial-gradient(ellipse 110% 80% at 50% 10%, #091409 0%, #050505 55%);
+  padding:0; overflow:hidden;
+}
+#screen-hub::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:linear-gradient(rgba(74,222,87,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(74,222,87,0.03) 1px,transparent 1px);
+  background-size:52px 52px;
+}
+#screen-hub.active { display:flex; flex-direction:column; }
+
+/* Hub ambient light */
+.hub-amb1 {
+  width:600px; height:300px;
+  background:radial-gradient(ellipse, rgba(74,222,87,0.07) 0%, transparent 70%);
+  top:-80px; left:50%; transform:translateX(-50%); animation-delay:0s;
+}
+.hub-amb2 {
+  width:300px; height:300px;
+  background:radial-gradient(circle, rgba(74,222,87,0.05) 0%, transparent 70%);
+  bottom:20px; left:15%; animation-delay:3s;
+}
+.hub-amb3 {
+  width:250px; height:250px;
+  background:radial-gradient(circle, rgba(74,222,87,0.04) 0%, transparent 70%);
+  bottom:40px; right:10%; animation-delay:5s;
+}
+
+.hub-header {
+  font-family:var(--font-display);
+  font-size:clamp(20px,3.5vw,44px); letter-spacing:4px; text-align:center;
+  padding:20px 0 10px;
+  background:linear-gradient(90deg, #fff 0%, var(--green-bright) 40%, #4ade57 60%, #fff 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  filter:drop-shadow(0 0 12px rgba(74,222,87,0.55));
+  position:relative; z-index:2;
+}
+
+.hub-body { display:grid; grid-template-columns:260px 1fr 280px; flex:1; gap:0; padding:10px 20px 20px; height:calc(100vh - 80px); position:relative; z-index:2; }
+
+/* Profile panel */
+.profile-panel {
+  background:linear-gradient(160deg, rgba(10,24,12,0.96) 0%, rgba(6,12,7,0.98) 100%);
+  border:1px solid rgba(74,222,87,0.18);
+  border-radius:16px; padding:20px;
+  display:flex; flex-direction:column; gap:12px;
+  box-shadow:0 0 30px rgba(74,222,87,0.05), inset 0 1px 0 rgba(74,222,87,0.12);
+  transition: border-color var(--dur-mid) var(--smooth), box-shadow var(--dur-mid) var(--smooth), transform var(--dur-slow) var(--spring), border-radius var(--dur-slow) var(--spring);
+}
+.profile-panel:hover {
+  border-color:rgba(74,222,87,0.4);
+  box-shadow:0 0 50px rgba(74,222,87,0.1), 0 0 20px rgba(74,222,87,0.06), inset 0 1px 0 rgba(74,222,87,0.2);
+  transform:translateY(-3px); border-radius:22px;
+}
+
+/* Nutrition panel */
+.nutrition-panel {
+  background:linear-gradient(160deg, rgba(10,24,12,0.96) 0%, rgba(6,12,7,0.98) 100%);
+  border:1px solid rgba(74,222,87,0.18);
+  border-radius:16px; padding:20px;
+  display:flex; flex-direction:column; gap:12px;
+  box-shadow:0 0 30px rgba(74,222,87,0.05), inset 0 1px 0 rgba(74,222,87,0.12);
+  transition: border-color var(--dur-mid) var(--smooth), box-shadow var(--dur-mid) var(--smooth), transform var(--dur-slow) var(--spring), border-radius var(--dur-slow) var(--spring);
+}
+.nutrition-panel:hover {
+  border-color:rgba(74,222,87,0.4);
+  box-shadow:0 0 50px rgba(74,222,87,0.1), inset 0 1px 0 rgba(74,222,87,0.2);
+  transform:translateY(-3px); border-radius:22px;
+}
+
+.panel-title {
+  font-family:var(--font-mono); font-size:11px; letter-spacing:3px;
+  color:var(--green); text-shadow:var(--neon-sm); text-transform:uppercase; margin-bottom:4px;
+}
+
+/* Level / XP boxes */
+.level-box, .xp-box {
+  background:linear-gradient(135deg, #0d1a0e 0%, #080d08 100%);
+  border-radius:10px; padding:16px; text-align:center;
+  border:1px solid rgba(74,222,87,0.1);
+  box-shadow:inset 0 0 20px rgba(74,222,87,0.04);
+  transition:box-shadow var(--dur-mid) var(--smooth), border-radius var(--dur-slow) var(--spring), border-color var(--dur-mid) var(--smooth);
+}
+.level-box:hover, .xp-box:hover {
+  box-shadow:0 0 22px rgba(74,222,87,0.14), inset 0 0 20px rgba(74,222,87,0.07);
+  border-radius:16px; border-color:rgba(74,222,87,0.25);
+}
+.level-num {
+  font-family:var(--font-display); font-size:clamp(26px,3.8vw,46px);
+  color:var(--green-bright); text-shadow:var(--neon-txt); line-height:1;
+}
+.level-sub { font-family:var(--font-mono); font-size:9px; letter-spacing:3px; color:rgba(74,222,87,0.7); text-shadow:var(--neon-sm); margin-top:4px; }
+.xp-num { font-family:var(--font-display); font-size:clamp(20px,2.8vw,36px); color:var(--green-bright); text-shadow:var(--neon-txt); }
+
+/* XP bar */
+.xp-bar-wrap {
+  background:linear-gradient(90deg, #050d06, #0a1a0b);
+  border-radius:8px; overflow:hidden; height:9px; margin-top:8px;
+  border:1px solid rgba(74,222,87,0.12);
+  box-shadow:inset 0 0 8px rgba(0,0,0,0.8);
+}
+.xp-bar-fill {
+  height:100%; border-radius:8px;
+  background:linear-gradient(90deg, #1a5c1f, var(--green-bright));
+  transition:width 1.4s var(--smooth);
+  box-shadow:0 0 12px #4ade57, 0 0 24px rgba(74,222,87,0.5);
+  position:relative;
+}
+.xp-bar-fill::after {
+  content:''; position:absolute; top:0; right:0; width:12px; height:100%;
+  background:white; opacity:0.35; border-radius:0 8px 8px 0;
+  filter:blur(3px);
+}
+
+/* Macro rows */
+.macro-row {
+  background:linear-gradient(90deg, rgba(10,24,12,0.9) 0%, rgba(6,14,8,0.8) 100%);
+  border-radius:8px; border-left:3px solid var(--green);
+  padding:10px 14px;
+  font-family:var(--font-display); font-size:clamp(10px,1.2vw,13px); letter-spacing:1px;
+  color:#ccc; display:flex; justify-content:space-between; align-items:center;
+  box-shadow:inset 0 0 12px rgba(74,222,87,0.03);
+  transition:
+    background var(--dur-mid) var(--smooth), border-radius var(--dur-slow) var(--spring),
+    transform var(--dur-mid) var(--spring), box-shadow var(--dur-mid) var(--smooth), padding var(--dur-mid) var(--spring);
+}
+.macro-row:hover {
+  background:linear-gradient(90deg, rgba(20,50,22,0.9) 0%, rgba(10,28,12,0.9) 100%);
+  border-radius:14px; transform:translateX(5px) scale(1.01);
+  box-shadow:0 0 18px rgba(74,222,87,0.14), inset 0 0 12px rgba(74,222,87,0.06);
+  padding-left:18px;
+}
+.macro-val { color:var(--green-bright); text-shadow:var(--neon-sm); font-size:1.05em; }
+
+/* Edit metrics */
+.btn-edit-metrics {
+  font-family:var(--font-display); font-size:11px; letter-spacing:2px;
+  color:var(--green); background:transparent;
+  border:1px solid rgba(74,222,87,0.4); border-radius:20px;
+  padding:10px 16px; cursor:pointer;
+  text-shadow:var(--neon-sm); box-shadow:0 0 8px rgba(74,222,87,0.12);
+  display:flex; align-items:center; gap:6px; justify-content:center;
+  transition: background var(--dur-mid) var(--smooth), box-shadow var(--dur-mid) var(--smooth), transform var(--dur-mid) var(--spring), border-radius var(--dur-slow) var(--spring), letter-spacing var(--dur-mid) var(--smooth);
+}
+.btn-edit-metrics:hover {
+  background:linear-gradient(135deg, rgba(74,222,87,0.14) 0%, rgba(30,80,32,0.5) 100%);
+  box-shadow:var(--neon-md); border-radius:10px; letter-spacing:3px; transform:scale(1.05);
+}
+.btn-edit-metrics:active { transform:scale(0.94) !important; }
+
+/* =============================================
+   MAP CONTAINER (FLUID RESPONSIVE)
+   ============================================= */
+.tree-center {
+  position:relative; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  width: 100%;
+  height: 100%;
+}
+.tree-center::before {
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(ellipse 65% 75% at 50% 50%, rgba(74,222,87,0.05) 0%, transparent 70%);
+  pointer-events: none; /* REQUIRED to allow clicking through the ambient background */
+}
+
+.tree-map-container {
+    align-items: center; justify-content: center;
+    position: relative;
+    width: 100%;
+    max-width: 550px; 
+    transform: scale(1.3); 
+    aspect-ratio: 500 / 580;
+    flex-shrink: 0;
+}
+
+/* Tree dots */
+.tree-dot {
+    position:absolute; width:28px; height:28px; border-radius:50%; cursor:pointer; z-index:10;
+    transition: transform var(--dur-mid) var(--spring), filter var(--dur-mid) var(--smooth), box-shadow var(--dur-mid) var(--smooth);
+}
+.tree-dot .dot-inner {
+    width:100%; height:100%; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    transition: background var(--dur-mid) var(--smooth), border-color var(--dur-mid) var(--smooth), border-radius var(--dur-slow) var(--spring), box-shadow var(--dur-mid) var(--smooth);
+}
+.tree-dot.locked .dot-inner { background:rgba(80,80,80,0.22); border:2px solid rgba(80,80,80,0.3); }
+.tree-dot.unlocked .dot-inner {
+    background:linear-gradient(135deg, rgba(74,222,87,0.2) 0%, rgba(30,80,32,0.5) 100%);
+    border:2px solid var(--green);
+    box-shadow:0 0 16px rgba(74,222,87,0.6), 0 0 40px rgba(74,222,87,0.25);
+    animation:dotPulse 2.2s var(--smooth) infinite;
+}
+.tree-dot.completed .dot-inner {
+    background:linear-gradient(135deg, var(--green-bright) 0%, #2a8c31 100%);
+    border:2px solid var(--green-bright);
+    box-shadow:0 0 20px #4ade57, 0 0 50px rgba(74,222,87,0.45);
+}
+@keyframes dotPulse {
+    0%,100%{box-shadow:0 0 10px rgba(74,222,87,0.45), 0 0 30px rgba(74,222,87,0.18)}
+    50%{box-shadow:0 0 26px #4ade57, 0 0 60px rgba(74,222,87,0.4)}
+}
+.tree-dot:hover { transform:scale(1.65) !important; filter:drop-shadow(0 0 14px #4ade57); }
+.tree-dot:hover .dot-inner { border-radius:35% !important; }
+.tree-dot:active { transform:scale(1.1) !important; }
+
+.dot-level-label {
+  position:absolute; top:-22px; left:50%; transform:translateX(-50%);
+  font-family:var(--font-mono); font-size:9px; letter-spacing:1px;
+  color:var(--green); text-shadow:var(--neon-sm); white-space:nowrap;
+  opacity:0; pointer-events:none;
+  transition:opacity var(--dur-fast) var(--snappy), transform var(--dur-mid) var(--spring);
+}
+.tree-dot:hover .dot-level-label { opacity:1; transform:translateX(-50%) translateY(-5px); }
+
+/* =============================================
+   TREE DRAWING ANIMATIONS
+   ============================================= */
+@keyframes drawTreeLine { to { stroke-dashoffset: 0; } }
+@keyframes fadeTreeItem { to { opacity: 1; } }
+
+/* =============================================
+   TOAST
+   ============================================= */
+.toast {
+  position:fixed; bottom:30px; left:50%; 
+  transform:translateX(-50%) translateY(150px) scale(0.9);
+   background:linear-gradient(135deg, rgba(10,28,12,0.97) 0%, rgba(6,16,8,0.99) 100%);
+  border:1px solid rgba(74,222,87,0.5);
+  color:var(--green); font-family:var(--font-display); font-size:13px;
+  letter-spacing:2px; padding:14px 30px; border-radius:8px; z-index:1000;
+  box-shadow:var(--neon-md); text-shadow:var(--neon-sm);
+  transition:transform 0.5s var(--spring), border-radius 0.5s var(--spring), opacity 0.3s var(--snappy);
+}
+
+.toast.show { 
+  transform:translateX(-50%) translateY(0) scale(1); 
+  opacity: 1;
+  pointer-events: auto;
+  border-radius:28px; 
+}
+/* =============================================
+   SCREEN 4 — WORKOUT
+   ============================================= */
+#screen-workout {
+  background:linear-gradient(135deg, #040a04 0%, #091409 40%, #04080a 100%);
+  grid-template-columns:1fr 1fr; align-items:center; gap:0;
+  padding:0; overflow:hidden; position:relative;
+}
+#screen-workout.active { display:grid; }
+#screen-workout::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:linear-gradient(rgba(74,222,87,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(74,222,87,0.025) 1px,transparent 1px);
+  background-size:50px 50px;
+}
+.workout-amb {
+  width:500px; height:500px;
+  background:radial-gradient(circle, rgba(74,222,87,0.09) 0%, transparent 70%);
+  top:50%; left:50%; transform:translate(-50%,-50%); animation-delay:2s;
+}
+
+/* Modifying workout-left to column layout so map stacks under text */
+.workout-left { 
+  position:relative; 
+  height:100%; 
+  display:flex; 
+  flex-direction: column;
+  align-items:center; 
+  justify-content:center; 
+  padding:48px 40px; 
+  z-index:2; 
+}
+.workout-right { padding:60px 40px; display:flex; flex-direction:column; justify-content:center; gap:20px; border-left:1px solid rgba(74,222,87,0.14); z-index:2; }
+
+.tree-label {
+  font-family:var(--font-display); font-size:clamp(28px,4.2vw,52px);
+  letter-spacing:2px; color:var(--white); text-shadow:4px 4px 0 rgba(0,0,0,0.9); line-height:1; margin-bottom:8px;
+}
+.exercise-name-big {
+  font-family:var(--font-display); font-size:clamp(14px,2.2vw,25px);
+  letter-spacing:2px; color:var(--green-bright); text-shadow:var(--neon-txt); margin-bottom:16px;
+}
+.target-label { font-family:var(--font-body); font-size:13px; letter-spacing:3px; color:rgba(74,222,87,0.6); text-transform:uppercase; }
+.reps-big { font-family:var(--font-display); font-size:clamp(24px,3.6vw,44px); color:var(--white); letter-spacing:1px; margin-top:4px; text-shadow:2px 2px 0 rgba(0,0,0,0.8); }
+.alltime-label { font-family:var(--font-body); font-size:13px; letter-spacing:3px; color:rgba(74,222,87,0.6); text-transform:uppercase; }
+.alltime-val { font-family:var(--font-display); font-size:clamp(18px,2.6vw,32px); color:var(--green-bright); text-shadow:var(--neon-sm); }
+
+.btn-start-workout {
+  font-family:var(--font-display); font-size:clamp(15px,2.4vw,28px);
+  letter-spacing:4px; color:var(--green);
+  background:linear-gradient(135deg, rgba(74,222,87,0.1) 0%, rgba(20,60,22,0.6) 100%);
+  border:2px solid rgba(74,222,87,0.6);
+  padding:16px 32px; cursor:pointer; border-radius:6px;
+  margin-top:8px; text-transform:uppercase;
+  text-shadow:var(--neon-sm);
+  box-shadow:var(--neon-sm), inset 0 1px 0 rgba(74,222,87,0.1);
+  transition:
+    background var(--dur-mid) var(--smooth), color var(--dur-fast) var(--snappy),
+    box-shadow var(--dur-mid) var(--smooth), transform var(--dur-mid) var(--spring),
+    border-radius var(--dur-slow) var(--spring), letter-spacing var(--dur-mid) var(--smooth),
+    padding var(--dur-mid) var(--spring), text-shadow var(--dur-mid) var(--smooth);
+}
+.btn-start-workout::after {
+  content:''; position:absolute; top:0; left:-120%; width:60%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(74,222,87,0.22),transparent);
+  transition:left 0.55s var(--smooth);
+}
+.btn-start-workout:hover::after { left:130%; }
+.btn-start-workout:hover {
+  background:linear-gradient(135deg, var(--green) 0%, #2a8c31 100%);
+  color:var(--black); text-shadow:none;
+  box-shadow:var(--neon-lg), 0 8px 32px rgba(74,222,87,0.3);
+  border-radius:14px; letter-spacing:7px; padding:16px 46px;
+  transform:scale(1.06) translateY(-3px);
+}
+.btn-start-workout:active { transform:scale(0.94) translateY(0) !important; border-radius:6px !important; }
+
+/* Back buttons */
+.btn-back-hub, .btn-back-workout {
+  font-family:var(--font-display); font-size:13px; letter-spacing:3px;
+  background:rgba(20,20,20,0.8); border:1px solid rgba(120,120,120,0.25);
+  color:var(--grey); padding:10px 24px; cursor:pointer; border-radius:6px;
+  align-self:flex-start; text-transform:uppercase;
+  transition: color var(--dur-fast) var(--snappy), border-color var(--dur-mid) var(--smooth), box-shadow var(--dur-mid) var(--smooth), transform var(--dur-mid) var(--spring), border-radius var(--dur-slow) var(--spring), background var(--dur-mid) var(--smooth), letter-spacing var(--dur-mid) var(--smooth);
+}
+.btn-back-hub:hover, .btn-back-workout:hover {
+  color:var(--white); border-color:rgba(230,230,230,0.4);
+  transform:translateX(-7px) scale(1.03); border-radius:22px;
+  background:rgba(40,40,40,0.85); letter-spacing:4px;
+  box-shadow:0 0 14px rgba(255,255,255,0.06);
+}
+.btn-back-hub:active, .btn-back-workout:active { transform:translateX(-2px) scale(0.96) !important; }
+
+
+/* =============================================
+   MOBILE RESPONSIVENESS
+   ============================================= */
+@media (max-width: 900px) {
+  #screen-hub { overflow-y: auto; overflow-x: hidden; }
+  
+  .hub-body {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: max-content;
+    gap: 30px;
+    padding: 20px;
+  }
+  
+  .tree-center { 
+    padding: 20px 0; 
+  }
+  
+  .tree-map-container {
+    max-width: 380px; 
+  }
+
+  #screen-workout.active {
+    display: flex; 
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* This successfully hides the map/text container strictly on mobile */
+  .workout-left {
+    display: none;
+  }
+  
+  .workout-right {
+    padding: 40px 20px 60px;
+    border-left: none;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .btn-back-hub, .btn-start-workout {
+    align-self: center;
+    margin: 0 auto;
+  }
+}
+</style>
+</head>
+<body>
+<div id="screen-hub" class="screen active">
+  <div class="amb hub-amb1"></div>
+  <div class="amb hub-amb2"></div>
+  <div class="amb hub-amb3"></div>
+  <div class="hub-header">PROGRESSION MAPPING</div>
+  <div class="hub-body">
+    <div class="profile-panel">
+      <div class="panel-title">User's Profile</div>
+      <div class="level-box">
+        <div class="level-num" id="hub-level">LVL 1</div>
+        <div class="level-sub">PROGRESS</div>
+        <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-bar" style="width:10%"></div></div>
+      </div>
+      <div class="xp-box">
+        <div class="xp-num" id="hub-xp">0</div>
+        <div class="level-sub">TOTAL METRIC XP</div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="panel-title" style="margin-bottom:8px">BMI Summary</div>
+        <div id="bmi-display" style="font-size:13px;line-height:1.9;color:var(--grey)">—</div>
+      </div>
+      <div class="progress-insights" style="margin-top:12px ">
+        <div class="panel-title" style="margin-bottom:8px">Progress Insights</div>
+            <div class="archive-box">
+                <div class="archive-label" style="text-align: center;">All-Time Single Set (PR)</div>
+                <div class="archive-val" id="record-pr" style="text-align: center;">0 Reps</div>
+            </div>
+            <div class="archive-box">
+                <div class="archive-label" style="text-align: center;">All Time Reps Done</div>
+                <div class="archive-val" id="record-volume" style="text-align: center;">0 Reps</div>
+            </div>
+            <div style="margin-top:12px; padding: 12px; border-radius: 8px;">
+                <strong style=" font-size:0.75rem; text-transform: uppercase; letter-spacing: 0.5px; display:block; margin-bottom:6px;">Milestone Accomplishments</strong>
+                <div id="milestones-vault" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 5px; color:#fff;"></div>
+            </div>
+      </div>
+    </div>
+
+    <div class="tree-center">
+      <div class="tree-map-container">
+        <svg viewBox="0 0 500 580" id="tree-svg-lines" style="position:absolute;inset:0;width:100%;height:100%;z-index:1"></svg>
+        <div id="tree-dots-container" style="position:absolute;inset:0;z-index:10"></div>
+      </div>
+    </div>
+
+    <div class="nutrition-panel">
+      <div class="panel-title">Nutritional Insight</div>
+      <div class="macro-row"><span>CALORIES</span><span class="macro-val" id="n-cal">2012 KCAL</span></div>
+      <div class="macro-row"><span>CARBOHYDRATES</span><span class="macro-val" id="n-carb">200G</span></div>
+      <div class="macro-row"><span>PROTEIN</span><span class="macro-val" id="n-prot">93G</span></div>
+      <div class="macro-row"><span>FATS</span><span class="macro-val" id="n-fat">55G</span></div>
+      <button class="btn-edit-metrics" onclick="document.getElementById('edit-modal').style.display='flex'">⚙ EDIT METRICS</button>
+      <div style="margin-top:8px">
+        <div class="panel-title" style="margin-bottom:8px">Weekly XP</div>
+        <div id="weekly-xp-bars" style="display:flex;gap:4px;align-items:flex-end;height:50px"></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(74,222,87,0.6);font-family:var(--font-mono);margin-top:4px;text-shadow:0 0 6px rgba(74,222,87,0.5)">
+          <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="screen-workout" class="screen">
+  <div class="amb workout-amb"></div>
+  
+  <div class="workout-left">
+    <div style="font-family:var(--font-display);font-size:clamp(20px,3.2vw,40px);letter-spacing:3px;color:var(--green-bright);text-shadow:var(--neon-txt-lg);line-height:1.15;text-align:center;margin-bottom: 20px;">PROGRESSION<br>MAPPING TREE</div>
+    <div class="tree-center">
+      <div class="tree-map-container" style="max-width: 360px;">
+        <svg viewBox="0 0 500 580" id="tree-svg-lines-workout" style="position:absolute;inset:0;width:100%;height:100%;z-index:1"></svg>
+        <div id="tree-dots-container-workout" style="position:absolute;inset:0;z-index:10"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="workout-right">
+    <div class="exercise-name-big" id="wd-exercise-name">STANDARD PUSH UP</div>
+    <div>
+      <div class="target-label">Target Exercises</div>
+      <div class="reps-big" id="wd-reps">11 REPS × 3 SETS</div>
+    </div>
+    <div id="wd-desc" style="font-size:13px;color:rgba(150,160,150,0.9);line-height:1.75;max-width:360px"></div>
+    <button class="btn-start-workout" onclick="window.location.href='/tracker'">START</button>
+    <button class="btn-back-hub" onclick="goTo('screen-hub')">← BACK</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div id="edit-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#111; padding:30px; border-radius:16px; border:1px solid var(--green); width:300px; text-align:center;">
+        <h2 style="color:var(--green); font-family:var(--font-display); margin-bottom:20px;">UPDATE METRICS</h2>
+        <input type="number" id="new-weight" placeholder="Weight (kg)" style="width:100%; padding:10px; margin-bottom:10px; background:#222; color:#fff; border:1px solid #444;">
+        <input type="number" id="new-height" placeholder="Height (cm)" style="width:100%; padding:10px; margin-bottom:20px; background:#222; color:#fff; border:1px solid #444;">
+        <div style="display:flex; gap:10px;">
+            <button onclick="saveMetrics()" style="flex:1; padding:10px; background:var(--green); border:none; cursor:pointer;">SAVE</button>
+            <button onclick="document.getElementById('edit-modal').style.display='none'" style="flex:1; padding:10px; background:#444; color:#fff; border:none; cursor:pointer;">CLOSE</button>
+        </div>
+    </div>
+</div>
+
+</body>
+<script>
+
+    async function saveMetrics() {
+    const weight = document.getElementById('new-weight').value;
+    const height = document.getElementById('new-height').value;
+
+    const res = await fetch('/api/update_profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            age: state.age, 
+            weight: weight,
+            height: height,
+            gender: 'Male', // Keep as current or retrieve from state
+            goal: 'Calisthenics'
+        })
+    });
+
+    if (res.ok) {
+        showToast("METRICS UPDATED!");
+        document.getElementById('edit-modal').style.display = 'none';
+        location.reload(); // Refresh to recalculate everything
+    }
+}
+
+let hasTreeAnimated = false;
+// In hub.html -> syncDataMetrics()
+async function syncDataMetrics() {
+    try {
+        const statsRes = await fetch('/api/stats');
+        const data = await statsRes.json();
+        
+        // 1. Level and XP
+        document.getElementById('hub-level').textContent = `LVL ${data.level}`;
+        document.getElementById('hub-xp').textContent = data.xp.toLocaleString();
+        
+        // 2. XP Bar (Progress bar)
+        document.getElementById('xp-bar').style.width = `${Math.min(100, (data.xp % 1000) / 1000 * 100)}%`;
+        
+        // 3. PR (Personal Record)
+        // Check if data.highestPR exists and is greater than 0
+        const prText = (data.highestPR > 0) ? `${data.highestPR} Reps` : "0 Reps";
+        document.getElementById('record-pr').textContent = prText;
+        
+        // 4. All-Time Reps (Volume)
+        document.getElementById('record-volume').textContent = `${data.total_volume.toLocaleString()} Reps`;
+
+        // 5. Milestones
+        const vault = document.getElementById('milestones-vault');
+        if (vault) {
+            vault.innerHTML = "";
+            if (data.milestones && data.milestones.length > 0) {
+                data.milestones.forEach(badge => {
+                    let container = document.createElement('div');
+                    container.style.padding = "4px 0";
+                    container.innerText = badge;
+                    vault.appendChild(container);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error syncing data metrics:', error);
+    }
+}
+
+function renderHub(){
+  if(state.nutrition){
+    document.getElementById('n-cal').textContent=state.nutrition.cal+' KCAL';
+    document.getElementById('n-carb').textContent=state.nutrition.carb+'G';
+    document.getElementById('n-prot').textContent=state.nutrition.prot+'G';
+    document.getElementById('n-fat').textContent=state.nutrition.fat+'G';
+    const cat=state.bmi<18.5?'Underweight':state.bmi<25?'Normal':state.bmi<30?'Overweight':'Obese';
+    document.getElementById('bmi-display').innerHTML=
+      `BMI: <span style="color:var(--green-bright);text-shadow:var(--neon-sm)">${state.bmi}</span> (${cat})<br>Age: ${state.age} | ${state.weight}kg ${state.height}cm`;
+  }
+  renderTreeDots(); renderWeeklyBars();
+}
+
+function showToast(msg,dur=3000){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+const _ov=document.createElement('div');
+_ov.style.cssText='position:fixed;inset:0;background:#050505;z-index:9998;pointer-events:none;opacity:0;transition:opacity 0.3s ease';
+document.body.appendChild(_ov);
+
+function goTo(id){
+  const cur=document.querySelector('.screen.active');
+  const nxt=document.getElementById(id);
+  if(!nxt||cur===nxt) return;
+  _ov.style.opacity='1';
+  setTimeout(()=>{
+    if(cur) cur.classList.remove('active');
+    nxt.classList.add('active');
+    if(id==='screen-hub') renderHub();
+    if(id==='screen-tracker' && typeof initTracker === 'function') initTracker();
+    _ov.style.opacity='0';
+  },300);
+}
+
+function renderTreeDots(){
+  const scaleX = 500/400, scaleY = 580/540;
+  const scaled = DOT_POSITIONS.map(p => ({x: p.x*scaleX, y: p.y*scaleY}));
+  const completedDots = Math.min(7, Math.floor(state.totalXP/200));
+
+  const isFirstView = !hasTreeAnimated;
+
+  // Array of target maps to render (Hub and Workout screen)
+  const mapTargets = [
+    { containerId: 'tree-dots-container', svgId: 'tree-svg-lines' },
+    { containerId: 'tree-dots-container-workout', svgId: 'tree-svg-lines-workout' }
+  ];
+
+  mapTargets.forEach(target => {
+    const container = document.getElementById(target.containerId);
+    const svg = document.getElementById(target.svgId);
+    
+    if(!container || !svg) return;
+
+    container.innerHTML = ''; 
+    svg.innerHTML = '';
+    
+    scaled.forEach((pos, i) => {
+      const dotNum = i + 1;
+      const status = dotNum <= completedDots ? 'completed' : dotNum === completedDots + 1 ? 'unlocked' : 'locked';
+      const animDelay = i * 0.3; 
+
+      if(i < scaled.length - 1){
+        const nx = scaled[i+1];
+        const lineLen = Math.sqrt(Math.pow(nx.x - pos.x, 2) + Math.pow(nx.y - pos.y, 2));
+
+        let glow, line;
+        
+        if(status === 'completed'){
+          glow = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          glow.setAttribute('x1', pos.x); glow.setAttribute('y1', pos.y); 
+          glow.setAttribute('x2', nx.x);  glow.setAttribute('y2', nx.y);
+          glow.setAttribute('stroke', 'rgba(74,222,87,0.2)'); 
+          glow.setAttribute('stroke-width', '10');
+          
+          if (isFirstView) {
+            glow.style.strokeDasharray = lineLen;
+            glow.style.strokeDashoffset = lineLen;
+            glow.style.animation = `drawTreeLine 0.6s var(--smooth) forwards ${animDelay}s`;
+          }
+          svg.appendChild(glow);
+        }
+
+        line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', pos.x); line.setAttribute('y1', pos.y); 
+        line.setAttribute('x2', nx.x);  line.setAttribute('y2', nx.y);
+        line.setAttribute('stroke', status === 'completed' ? '#4ade57' : 'rgba(60,60,60,0.55)');
+        line.setAttribute('stroke-width', status === 'completed' ? '2.5' : '1.5');
+        if(status === 'completed') line.setAttribute('stroke-dasharray', '8,4');
+
+        if (isFirstView) {
+          if(status === 'completed') {
+             line.style.opacity = '0';
+             line.style.animation = `fadeTreeItem 0.3s ease forwards ${animDelay + 0.6}s`;
+          } else {
+             line.style.strokeDasharray = lineLen;
+             line.style.strokeDashoffset = lineLen;
+             line.style.animation = `drawTreeLine 0.6s var(--smooth) forwards ${animDelay}s`;
+          }
+        }
+        svg.appendChild(line);
+      }
+
+      const numTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      const offset = pos.x < 250 ? -20 : 20;
+      numTxt.setAttribute('x', pos.x + offset); numTxt.setAttribute('y', pos.y - 12);
+      numTxt.setAttribute('fill', status === 'locked' ? 'rgba(80,80,80,0.4)' : 'rgba(111,255,121,0.85)');
+      numTxt.setAttribute('font-size', '9'); numTxt.setAttribute('font-family', 'Orbitron,monospace'); 
+      numTxt.setAttribute('text-anchor', 'middle');
+      numTxt.setAttribute('filter', status !== 'locked' ? 'url(#neonFilter)' : 'none');
+      numTxt.textContent = String(dotNum).padStart(2, '0');
+      
+      if(isFirstView) {
+        numTxt.style.opacity = '0';
+        numTxt.style.animation = `fadeTreeItem 0.4s ease forwards ${animDelay}s`;
+      }
+      svg.appendChild(numTxt);
+
+      const dot = document.createElement('div');
+      dot.className = `tree-dot ${status}`;
+      
+      const leftPct = (pos.x / 500) * 100;
+      const topPct = (pos.y / 580) * 100;
+      dot.style.cssText = `left: calc(${leftPct}% - 14px); top: calc(${topPct}% - 14px); width: 28px; height: 28px;`;
+      
+      if (isFirstView) {
+        dot.style.opacity = '0';
+        dot.style.animation = `fadeTreeItem 0.4s ease forwards ${animDelay}s`;
+      }
+
+      const wn = WORKOUTS[i] ? WORKOUTS[i].name : '';
+      dot.innerHTML = status === 'completed'
+        ? `<div class="dot-inner" style="font-size:13px;color:#050505;font-weight:bold;display:flex;align-items:center;justify-content:center">✓</div><div class="dot-level-label">${dotNum}. ${wn}</div>`
+        : `<div class="dot-inner"></div><div class="dot-level-label">${dotNum}. ${wn}</div>`;
+        
+      if(status!=='locked') dot.addEventListener('click',()=>openWorkout(dotNum));
+      container.appendChild(dot);
+    });
+  });
+
+  if (isFirstView) {
+    hasTreeAnimated = true;  
+    }
+}
+
+function renderWeeklyBars(){
+  const xpData=[120,200,80,350,100,420,180];
+  const maxXP=Math.max(...xpData);
+  const el=document.getElementById('weekly-xp-bars');
+  el.innerHTML='';
+  xpData.forEach(v=>{
+    const bar=document.createElement('div');
+    const h=Math.round((v/maxXP)*46);
+    bar.style.cssText=`flex:1;background:linear-gradient(180deg,var(--green-bright) 0%,#2a8c31 100%);border-radius:3px 3px 0 0;height:${h}px;box-shadow:0 0 8px rgba(74,222,87,0.5),0 0 18px rgba(74,222,87,0.2);transition:height 1.2s var(--smooth),transform 0.25s var(--spring),border-radius 0.4s var(--spring),box-shadow 0.25s;cursor:default;`;
+    bar.addEventListener('mouseenter',()=>{bar.style.transform='scaleY(1.1) translateY(-3px)';bar.style.borderRadius='6px 6px 0 0';bar.style.boxShadow='0 0 16px rgba(74,222,87,0.8),0 0 36px rgba(74,222,87,0.4)';});
+    bar.addEventListener('mouseleave',()=>{bar.style.transform='';bar.style.borderRadius='3px 3px 0 0';bar.style.boxShadow='0 0 8px rgba(74,222,87,0.5),0 0 18px rgba(74,222,87,0.2)';});
+    el.appendChild(bar);
+  });
+}
+
+function openWorkout(level){
+  state.currentWorkoutLevel=level;
+  const w=WORKOUTS[level-1];
+  document.getElementById('wd-exercise-name').textContent=w.name.toUpperCase();
+  document.getElementById('wd-reps').textContent=`${w.reps} REPS × ${w.sets} SETS`;
+  document.getElementById('wd-desc').textContent=w.desc;
+  goTo('screen-workout');
+}
+
+let chatInit=false;
+function initTracker(){
+  state.reps=0; state.sets=1;
+  updateStats(); renderStreak();
+  if(!chatInit){chatInit=true; const w=WORKOUTS[state.currentWorkoutLevel-1]; addChat('Today: '+w.name+' · '+w.reps+' reps × '+w.sets+' sets. Target: '+w.muscle+'. Let\'s go! 💪');}
+}
+function updateStats(){
+  const w=WORKOUTS[state.currentWorkoutLevel-1];
+  document.getElementById('tr-reps').textContent=state.reps;
+  document.getElementById('tr-sets').textContent=state.sets+'/'+w.sets;
+  const s=state.reps===0?'READY':state.reps<w.reps?'ACTIVE':'SET DONE';
+  const el=document.getElementById('tr-status');
+  el.textContent=s; el.style.color=state.reps>=w.reps?'var(--green-bright)':'var(--white)';
+}
+
+const WORKOUTS = [
+  {level:1,name:"Standard Push Ups",       reps:15,sets:3,xp:200,muscle:"Chest / Triceps"},
+  {level:2,name:"Squats",       reps:12,sets:3,xp:200,muscle:"Chest / Triceps"},
+  {level:3,name:"Lunges",   reps:11,sets:3,xp:200,muscle:"Chest / Triceps"},
+  {level:4,name:"Dips",    reps:8, sets:3,xp:200,muscle:"Triceps / Chest"},
+  {level:5,name:"Pull-Ups",       reps:10,sets:3,xp:200,muscle:"Shoulders"},
+  {level:6,name:"Handstand Push Ups",     reps:6, sets:3,xp:200,muscle:"Unilateral Chest"},
+  {level:7,name:"Hanging Leg Raises",   reps:5, sets:4,xp:200,muscle:"Full Upper Body"},
+  {level:8,name:"Planks (Isometric Apex)",  reps:5, sets:4,xp:200,muscle:"Full Upper Body"}
+];
+const DOT_POSITIONS=[{x:210,y:450},{x:315,y:430},{x:175,y:320},{x:295,y:310},{x:215,y:195},{x:310,y:165},{x:255,y:115}, {x:320,y:95}];
+
+let state = {
+  currentLevel: 1,
+  totalXP: 500,
+  age: 0,
+  weight: 0,
+  height: 0,
+  bmi: 0,
+  nutrition: null,
+  allTimeReps: {} 
+};
+
+window.onload = async () => {
+    try {
+        const profileRes = await fetch('/api/get_profile');
+        const profile = await profileRes.json();
+        
+        if (!profile.error) {
+            state.age = parseFloat(profile.age);
+            state.weight = parseFloat(profile.weight);  // assumed kg
+            state.height = parseFloat(profile.height);  // assumed cm
+            
+            const hM = state.height / 100;
+            state.bmi = +(state.weight / (hM * hM)).toFixed(1);
+            
+            let bmr = profile.gender === 'Male' 
+                ? 88.362 + (13.397 * state.weight) + (4.799 * state.height) - (5.677 * state.age)
+                : 447.593 + (9.247 * state.weight)  + (3.098 * state.height) - (4.330 * state.age);
+                
+            let tdee = Math.round(bmr * 1.55);
+            state.nutrition = {
+                cal: tdee,
+                carb: Math.round(tdee * 0.4 / 4),
+                prot: Math.round(state.weight * 2),
+                fat: Math.round(tdee * 0.25 / 9)
+            };
+        }
+
+        const statsRes = await fetch('/api/stats');
+        if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            state.currentLevel = statsData.level;
+            state.totalXP = statsData.xp;
+        }
+
+    } catch (e) {
+        console.error("Failed to load hub datasets (Mock API Data in effect)", e);
+    }
+    await syncDataMetrics();
+    renderHub();
+};
+</script>
+</html>

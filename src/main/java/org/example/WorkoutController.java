@@ -22,7 +22,9 @@ public class WorkoutController {
     public boolean checkProfileExists() { return db.hasUserProfile(); }
     public String fetchProfile() { return db.getUserProfile(); }
     public String registerUser(String age, String weight, String height, String gender, String goal) {
+        // 1. Update the database
         db.saveUserProfile(age, weight, height, gender, goal);
+
         return "Profile Registration Confirmed";
     }
 

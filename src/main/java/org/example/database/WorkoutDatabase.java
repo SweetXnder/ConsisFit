@@ -18,7 +18,7 @@ public class WorkoutDatabase implements IDataOperations {
 
     private WorkoutDatabase() {}
 
-    public static WorkoutDatabase getInstance() {
+    public static WorkoutDatabase getInstance() { 
         if (instance == null) instance = new WorkoutDatabase();
         return instance;
     }

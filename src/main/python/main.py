@@ -2,11 +2,11 @@ import os
 import time
 import json
 from werkzeug.utils import secure_filename
-from flask import Flask, render_template, Response, request, jsonify, redirect, url_for
+from flask import Flask, Response, render_template, request, jsonify, redirect, url_for
 from py4j.java_gateway import JavaGateway
 from groq import Groq
 
-# Import our new OOP Modules
+# Import our OOP Modules
 from core.config import UPLOAD_FOLDER, GROQ_API_KEY
 from core.state import AppState
 from engine.vision import VisionEngine
@@ -30,25 +30,40 @@ except Exception:
     java_backend = None
     print("Critical: Java Process detached. Verify WorkoutController instance is alive.")
 
-# --- RESTFUL ROUTING LAYERS ---
-@app.route('/')
-def index():
-    if java_backend and not java_backend.checkProfileExists():
-        return redirect(url_for('onboarding'))
-    return render_template('index.html')
+# --- UI ROUTING LAYERS ---
 
-@app.route('/onboarding', methods=['GET', 'POST'])
-def onboarding():
-    if request.method == 'POST':
-        if java_backend:
-            java_backend.registerUser(
-                request.form.get('age'), request.form.get('weight'),
-                request.form.get('height'), request.form.get('gender'),
-                request.form.get('goal')
-            )
-        return redirect(url_for('index'))
+@app.route('/')
+def landing():
+    return render_template('landing.html')
+
+@app.route('/start')
+def start():
+    if java_backend and java_backend.checkProfileExists():
+        return redirect(url_for('hub'))
     return render_template('onboarding.html')
 
+@app.route('/hub')
+def hub():
+    if java_backend and not java_backend.checkProfileExists():
+        return redirect(url_for('start'))
+    return render_template('hub.html')
+
+@app.route('/tracker')
+def tracker():
+    if java_backend and not java_backend.checkProfileExists():
+        return redirect(url_for('start'))
+    return render_template('tracker.html')
+
+# --- DATA SYNCHRONIZATION APIs ---
+
+@app.route('/api/telemetry')
+def get_telemetry():
+    """Returns the live, real-time data from the Computer Vision engine."""
+    # Ensure LATEST_TELEMETRY exists in your AppState object
+    if not hasattr(AppState, 'LATEST_TELEMETRY') or not AppState.LATEST_TELEMETRY:
+        return jsonify({"reps": 0, "status": "READY", "feedback": ""})
+    return jsonify(AppState.LATEST_TELEMETRY)
+        
 @app.route('/api/get_profile')
 def get_profile():
     if not java_backend: return jsonify({"error": "Java Core Offline"}), 500
@@ -78,6 +93,56 @@ def update_profile():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+@app.route('/api/save_workout', methods=['POST'])
+def save_workout():
+    if not java_backend: return jsonify({"error": "Java Core Offline"}), 500
+    data = request.json
+    try:
+        exercise_name = data.get('exercise', 'Unknown Exercise')
+        completed_reps = data.get('completed_reps', 0)
+        
+        if completed_reps > 0:
+            java_backend.processVideoResult(exercise_name, completed_reps, "Reps")
+            return jsonify({"success": True, "logged": completed_reps})
+        return jsonify({"success": False, "message": "No volume to log"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route('/api/stats')
+def get_stats():
+    csv_path = "/Users/xander/IdeaProjects/GymRat/workout_history.csv"
+    total_volume = 0
+    highest_rep = 0
+    
+    if os.path.exists(csv_path):
+        with open(csv_path, 'r') as f:
+            for row in f:
+                parts = [p.strip() for p in row.split(',')]
+                # Format is: ['LOG-ID', 'Exercise', '11 Reps', 'Date']
+                if len(parts) >= 3:
+                    try:
+                        # Extract the number from parts[2], e.g., "11 Reps" -> 11
+                        raw_vol = parts[2]
+                        # This splits "11 Reps" into ["11", "Reps"] and takes the first part
+                        val = int(raw_vol.split()[0]) 
+                        
+                        total_volume += val
+                        if val > highest_rep: 
+                            highest_rep = val
+                    except Exception as e:
+                        # This will catch if the parsing fails for a specific line
+                        continue
+    
+    return jsonify({
+        "level": (total_volume * 15 // 1000) + 1, 
+        "xp": total_volume * 15, 
+        "total_volume": total_volume, 
+        "highestPR": highest_rep,
+        "milestones": ["🏆 Iron Initiate"] if total_volume > 0 else []
+    })
+
+# --- AI GENERATION APIS ---
+
 @app.route('/api/daily_plan')
 def get_daily_plan():
     if not groq_client or not java_backend: return jsonify({"error": "AI pipeline components not ready."})
@@ -91,42 +156,21 @@ def get_daily_plan():
 
     csv_path = "/Users/xander/IdeaProjects/GymRat/workout_history.csv"
     v_loaded = 0
-    active_days = set()
     if os.path.exists(csv_path):
         with open(csv_path, 'r') as f:
             for row in f:
+                print(f"DEBUG: Reading row: {row}")
                 parts = row.strip().split(',')
                 if len(parts) >= 4:
                     try:
                         v_loaded += int(parts[2].split()[0])
-                        d_chunk = parts[3].split()
-                        active_days.add(f"{d_chunk[1]} {d_chunk[2]}")
                     except: pass
     
-    current_streak = len(active_days)
-    total_xp = v_loaded * 15
-    user_level = (total_xp // 1000) + 1 
-
+    user_level = ((v_loaded * 15) // 1000) + 1 
     unlocked_exercises = ["Push-Ups", "Squats", "Lunges", "Dips"]
     if user_level >= 3: unlocked_exercises.append("Pull-Ups")
     if user_level >= 6: unlocked_exercises.extend(["Handstand Push-Ups", "Hanging Leg Raises"])
     if user_level >= 10: unlocked_exercises.append("Planks")
-
-    last_ex = AppState.LATEST_TELEMETRY["exercise"]
-    lowest_ang = AppState.LATEST_TELEMETRY["lowest_angle"]
-
-    form_accuracy_pct = 94
-    form_flaws_summary = "Excellent postural integrity maintained across your prior session."
-    energy_level = "High"
-    tempo_preference = "High-BPM focus frames (Violin arrangements / Upbeat Melodic Classical)"
-
-    if last_ex == "Dips" and lowest_ang < 90:
-        form_accuracy_pct = 76
-        form_flaws_summary = f"Excessive drop depth detected at {lowest_ang} degrees, hyperextending past your safe 90-degree threshold frame and stressing anterior deltoids."
-        energy_level = "Medium"
-    elif last_ex in ["Push-Ups", "Planks"] and lowest_ang < 152 and lowest_ang != 180:
-        form_accuracy_pct = 80
-        form_flaws_summary = f"Midsection sag lines detected. Core line angle dropped out of structural target plane down to {lowest_ang} degrees."
 
     prompt = f"""
     You are ConsisFit, an elite, data-driven AI Personal Gym Trainer and Performance Nutritionist. 
@@ -138,23 +182,14 @@ def get_daily_plan():
     - Gender: {profile[3]}
     - Primary Fitness Goal: {profile[4]}
 
-    [CONSISFIT REAL-TIME & HISTORICAL DATA]
-    - Current Character Level: Level {user_level}
-    - Dynamic Unlocked Exercise Choices: {", ".join(unlocked_exercises)}
-    - Recent Form Accuracy Score (Mediapipe): {form_accuracy_pct}%
-    - Main Form Deficiencies Identified: {form_flaws_summary}
-    - Current Workout Streak: {current_streak} days
-    - Athlete Energy/Fatigue Level: {energy_level}
-    - Audio/Tempo Preference: {tempo_preference}
-
     [INSTRUCTIONS]
-    1. Calculate optimal daily macronutrients and calories explicitly based on the Athlete Biometrics (Weight, Height, Age, Gender) using the Mifflin-St Jeor equation, adjusted for their primary goal.
-    2. Design today's calisthenics routine selecting ONLY from the provided [Dynamic Unlocked Exercise Choices].
+    1. Calculate optimal daily macronutrients and calories explicitly based on the Athlete Biometrics using the Mifflin-St Jeor equation.
+    2. Design today's calisthenics routine selecting ONLY from: {", ".join(unlocked_exercises)}.
     3. Generate a hyper-personalized, actionable 'insight'.
 
     [OUTPUT CONSTRAINT]
     Return a flat JSON object ONLY. Enclose all values in string quotes. 
-    You MUST dynamically calculate the specific nutritional values for this athlete. Do NOT use generic examples.
+    You MUST dynamically calculate the specific nutritional values for this athlete.
 
     Target JSON format:
     {{
@@ -180,18 +215,17 @@ def get_daily_plan():
 
 @app.route('/ask_coach', methods=['POST'])
 def ask_coach():
-    if not groq_client: return jsonify({"answer": "AI Engine link is offline."})
+    if not groq_client: return jsonify({"answer": "Error: AI Engine link is offline. Check API Key."})
     user_q = request.json.get('question')
     
-    profile = ["19", "70", "175", "Male", "V-Taper Focus"]
+    profile = ["19", "70", "175", "Male", "Calisthenics"]
     if java_backend:
         try: profile = java_backend.fetchProfile().split(",")
         except: pass
 
     rag_context = f"""
     You are ConsisFit, an elite AI Gym Trainer.
-    [ATHLETE BIOMETRICS] Age: {profile[0]} | Weight: {profile[1]}kg | Height: {profile[2]}cm | Gender: {profile[3]} | Goal: {profile[4]}
-    [LAST TRACKED SET] Exercise: {AppState.LATEST_TELEMETRY['exercise']} | Deepest Joint Apex: {AppState.LATEST_TELEMETRY['lowest_angle']} degrees
+    [ATHLETE BIOMETRICS] Age: {profile[0]} | Weight: {profile[1]}kg | Height: {profile[2]}cm | Gender: {profile[3]}
     [USER QUERY] "{user_q}"
     Answer concisely (max 3 sentences) using plain prose.
     """
@@ -199,7 +233,10 @@ def ask_coach():
         res = groq_client.chat.completions.create(messages=[{"role": "user", "content": rag_context}], model="llama-3.1-8b-instant")
         return jsonify({"answer": res.choices[0].message.content})
     except Exception as e: 
-        return jsonify({"answer": f"API Request fault: {str(e)}"})
+        print(f"GROQ ERROR: {str(e)}") 
+        return jsonify({"answer": f"API Fault: {str(e)}"}) 
+
+# --- VISION ENDPOINTS ---
 
 @app.route('/upload_video', methods=['POST'])
 def upload_video():
@@ -207,49 +244,26 @@ def upload_video():
     filename = secure_filename(file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
-    return jsonify({"filepath": filepath}), 200
+    
+    # OS FIX for Windows Uploads
+    safe_filepath = filepath.replace('\\', '/')
+    return jsonify({"filepath": safe_filepath}), 200
 
 @app.route('/video_feed')
 def video_feed():
-    # Pass the Java Gateway down to the Engine
-    return Response(VisionEngine.generate_frames(request.args.get('exercise', 'Push-Ups'), request.args.get('source', '0'), java_backend), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/api/stats')
-def get_stats():
-    csv_path = "/Users/xander/IdeaProjects/GymRat/workout_history.csv"
-    total_volume = highest_rep = 0
-    highest_rep_exercise = "None"
-    active_days = set()
-    if os.path.exists(csv_path):
-        with open(csv_path, 'r') as f:
-            for row in f:
-                parts = row.strip().split(',')
-                if len(parts) >= 4:
-                    try:
-                        ex_name = parts[1]
-                        val = int(parts[2].split()[0])
-                        if parts[2].split()[1] == "Reps":
-                            total_volume += val
-                            if val > highest_rep: highest_rep, highest_rep_exercise = val, ex_name
-                        else: total_volume += val
-                        d_chunk = parts[3].split()
-                        active_days.add(f"{d_chunk[1]} {d_chunk[2]}")
-                    except: pass
-    
-    total_xp = total_volume * 15
-    milestones = []
-    if total_volume > 0: milestones.append(" Gym Cutie (First Set Logged)")
-    if total_volume >= 150: milestones.append(" Gym Chad (150+ Total Units)")
-    if len(active_days) >= 3: milestones.append(" Habit Builder (3+ Active Days)")
-    if highest_rep >= 15: milestones.append(" Rep Demon (Crushed 15+ Single Set Reps)")
-    if not milestones: milestones.append(" Syncing initial records...")
-
-    return jsonify({
-        "level": (total_xp // 1000) + 1, "xp": total_xp, 
-        "streak": len(active_days), "workouts_logged": len(active_days),
-        "total_volume": total_volume, "highest_rep": highest_rep,
-        "highest_rep_exercise": highest_rep_exercise, "milestones": milestones[:3]
-    })
-
+    # Pass java_backend and exercise name; the engine should now 
+    # only be drawing SKELETONS, not text!
+    return Response(
+        VisionEngine.generate_frames(
+            request.args.get('exercise', 'Push-Ups'), 
+            request.args.get('source', '0'), 
+            java_backend
+        ), 
+        mimetype='multipart/x-mixed-replace; boundary=frame'
+    )
+# --- ENSURE THIS BLOCK IS CORRECT ---
 if __name__ == "__main__":
+    # Ensure UPLOAD_FOLDER exists
+    if not os.path.exists(UPLOAD_FOLDER):
+        os.makedirs(UPLOAD_FOLDER)
     app.run(host='127.0.0.1', port=5000, debug=True)

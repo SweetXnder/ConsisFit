@@ -1,3 +1,4 @@
+<!--FOR REFERENC USE-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,10 +146,10 @@
                 <div class="chat-box" id="chatbox">
                     <div class="msg-ai">Greetings! I am ConsisFit, your personal data-driven AI Gym Trainer and Performance Nutritionist. Do you have any questions about your workouts or nutrition?</div>
                 </div>
-                <div class="chat-input">
-                    <input type="text" id="coach-q" placeholder="Why did my lower elbow click?">
-                    <button id="ask-btn" onclick="askCoach()">Ask</button>
-                </div>
+                <form class="chat-input" onsubmit="event.preventDefault(); askCoach()">
+                    <input type="text" id="coach-q" placeholder="Ask ConsisFit anything!">
+                    <button type="submit">Ask</button>
+                </form>
             </div>
 
             <div class="panel">
@@ -201,6 +202,9 @@
     </div>
 
     <script>
+
+        // workouts here inputted 
+        
         async function syncDataMetrics() {
             try {
                 const statsRes = await fetch('/api/stats');
